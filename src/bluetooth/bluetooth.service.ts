@@ -43,9 +43,7 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async connectToDevice(peripheral: noble.Peripheral) {
-    this.logger.log(
-      `Підключення до ${peripheral.advertisement.manufacturerData}...`,
-    );
+    this.logger.log(`Підключення...`);
     await peripheral.connectAsync();
     this.logger.log('Підключено!');
 
