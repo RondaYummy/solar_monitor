@@ -31,10 +31,7 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(`Знайдено пристрій: ${manufacturerData}`);
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником)
-      if (
-        manufacturerData ===
-        '060001092022e7b9d295c0c68d09812b2b7e23820819189acb01ee2d26'
-      ) {
+      if (manufacturerData.startsWith('650b88a0c84780')) {
         noble.stopScanning();
         try {
           await this.connectToDevice(peripheral);
