@@ -28,7 +28,7 @@ export class BluetoothService implements OnModuleInit {
       const localName = peripheral.advertisement.localName || 'Unnamed Device';
       const manufacturerData = peripheral.advertisement.manufacturerData;
       this.logger.log(`Знайдено пристрій: (${peripheral.uuid}) ${localName}`);
-      this.logger.log(`Дані: ${manufacturerData.toString('hex')}`);
+      this.logger.log(peripheral.advertisement);
 
       // Якщо це потрібний вам пристрій (перевіряємо за UUID)
       // TODO hardcode
@@ -47,7 +47,9 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async connectToDevice(peripheral: noble.Peripheral) {
-    this.logger.log(`Підключення до ${peripheral.advertisement.localName}...`);
+    this.logger.log(
+      `Підключення до ${peripheral.advertisement.manufacturerData}...`,
+    );
     await peripheral.connectAsync();
     this.logger.log('Підключено!');
 
