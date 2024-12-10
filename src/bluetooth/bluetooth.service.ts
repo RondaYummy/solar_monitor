@@ -34,9 +34,9 @@ export class BluetoothService implements OnModuleInit {
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником)
       if (manufacturerData.startsWith('650b88a0c84780')) {
-      //   noble.stopScanning();
+        //   noble.stopScanning();
         try {
-          await this.connectToDevice(peripheral);
+          //  await this.connectToDevice(peripheral);
         } catch (error) {
           this.logger.error(`Не вдалось підключитись: ${error}`);
         }
