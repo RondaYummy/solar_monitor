@@ -26,10 +26,13 @@ export class BluetoothService implements OnModuleInit {
     // Коли знайдено пристрій
     noble.on('discover', async (peripheral) => {
       const localName = peripheral.advertisement.localName || 'Unnamed Device';
-      this.logger.log(`Знайдено пристрій: ${localName} (${peripheral.uuid})`);
+      const manufacturerData = peripheral.advertisement.manufacturerData;
+      this.logger.log(`Знайдено пристрій: (${peripheral.uuid}) ${localName}`);
+      this.logger.log(`Дані: ${manufacturerData}`);
 
-      // Якщо це потрібний вам пристрій (перевіряємо за localName або UUID)
-      if (localName === 'MyBluetoothDevice') {
+      // Якщо це потрібний вам пристрій (перевіряємо за UUID)
+      // TODO hardcode
+      if (peripheral.uuid === 'MyBluetoothDevice') {
         noble.stopScanning();
         try {
           await this.connectToDevice(peripheral);
