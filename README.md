@@ -30,3 +30,9 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+### Deploy
+
+chmod +x deploy.sh
+
+And run script: ./deploy.sh
