@@ -28,7 +28,9 @@ export class BluetoothService implements OnModuleInit {
       // const localName = peripheral.advertisement.localName || 'Unnamed Device';
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
-      this.logger.log(`Знайдено пристрій: ${manufacturerData}`);
+      this.logger.log(
+        `Знайдено пристрій: ${manufacturerData} ${peripheral.uuid}`,
+      );
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником)
       if (manufacturerData.startsWith('650b88a0c84780')) {
