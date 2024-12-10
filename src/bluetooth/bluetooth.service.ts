@@ -26,12 +26,13 @@ export class BluetoothService implements OnModuleInit {
     // Коли знайдено пристрій
     noble.on('discover', async (peripheral) => {
       // const localName = peripheral.advertisement.localName || 'Unnamed Device';
-      const manufacturerData = peripheral.advertisement.manufacturerData;
+      const manufacturerData =
+        peripheral.advertisement.manufacturerData?.toString('hex');
       this.logger.log(`Знайдено пристрій: ${manufacturerData}`);
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником)
       if (
-        manufacturerData.toString('hex') ===
+        manufacturerData ===
         '060001092022e7b9d295c0c68d09812b2b7e23820819189acb01ee2d26'
       ) {
         noble.stopScanning();
