@@ -11,15 +11,29 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private setupBluetooth() {
+    this.logger.log(`Операційна система: ${process.platform}`);
+
     // Коли стан адаптера зміниться
     noble.on('stateChange', async (state) => {
-      if (state === 'poweredOn') {
-        this.logger.log('Bluetooth адаптер увімкнено, починаємо сканування...');
-        // Запускаємо сканування без фільтрів
-        await noble.startScanningAsync([], true);
-      } else {
-        this.logger.log(`Bluetooth адаптер: ${state}`);
-        noble.stopScanning();
+      this.logger.log(`Стан Bluetooth змінився на: ${state}`);
+
+      // Перевіряємо стан більш детально
+      if (state === 'unsupported') {
+        this.logger.error(
+          'Bluetooth Low Energy не підтримується на цьому пристрої',
+        );
+      } else if (state === 'unauthorized') {
+        this.logger.error('Немає прав доступу до Bluetooth');
+      } else if (state === 'poweredOff') {
+        this.logger.error('Bluetooth вимкнено');
+      } else if (state === 'poweredOn') {
+        this.logger.log('Bluetooth увімкнено, починаємо сканування...');
+        try {
+          await noble.startScanningAsync([], true);
+          this.logger.log('Сканування успішно запущено');
+        } catch (error) {
+          this.logger.error(`Помилка при запуску сканування: ${error}`);
+        }
       }
     });
 
@@ -36,7 +50,7 @@ export class BluetoothService implements OnModuleInit {
       if (manufacturerData.startsWith('650b88a0c84780')) {
         //   noble.stopScanning();
         try {
-          //  await this.connectToDevice(peripheral);
+          await this.connectToDevice(peripheral);
         } catch (error) {
           this.logger.error(`Не вдалось підключитись: ${error}`);
         }
