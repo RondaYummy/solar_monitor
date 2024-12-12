@@ -28,6 +28,48 @@ export class BluetoothService implements OnModuleInit {
 
       this.logger.log(`Bluetooth увімкнено: ${stdout}`);
     });
+
+    exec('bluetoothctl agent on', (error, stdout, stderr) => {
+      if (error) {
+        this.logger.error(`Помилка Bluetooth: ${error.message}`);
+        return;
+      }
+
+      if (stderr) {
+        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
+        return;
+      }
+
+      this.logger.log(`Bluetooth: ${stdout}`);
+    });
+
+    exec('bluetoothctl default-agent', (error, stdout, stderr) => {
+      if (error) {
+        this.logger.error(`Помилка Bluetooth: ${error.message}`);
+        return;
+      }
+
+      if (stderr) {
+        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
+        return;
+      }
+
+      this.logger.log(`Bluetooth: ${stdout}`);
+    });
+
+    exec('bluetoothctl scan on', (error, stdout, stderr) => {
+      if (error) {
+        this.logger.error(`Помилка Bluetooth: ${error.message}`);
+        return;
+      }
+
+      if (stderr) {
+        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
+        return;
+      }
+
+      this.logger.log(`Bluetooth: ${stdout}`);
+    });
   }
 
   private async setupBluetooth() {
