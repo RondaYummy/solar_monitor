@@ -10,8 +10,10 @@ export class BluetoothService implements OnModuleInit {
     this.setupBluetooth();
   }
 
-  private setupBluetooth() {
+  private async setupBluetooth() {
     this.logger.log(`Операційна система: ${process.platform}`);
+
+    await noble.startScanningAsync([], true);
 
     // Коли стан адаптера зміниться
     noble.on('stateChange', async (state) => {
