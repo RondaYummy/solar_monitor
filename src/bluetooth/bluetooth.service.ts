@@ -13,6 +13,8 @@ export class BluetoothService implements OnModuleInit {
       }
     });
     this.logger.log('Bluetooth initialization complete.');
+
+    await this.setupBluetooth();
   }
 
   private async startScanning() {
@@ -34,24 +36,27 @@ export class BluetoothService implements OnModuleInit {
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth увімкнено, запускаємо сканування...');
         try {
-          await noble.startScanningAsync([], true); // true - режим дублювання
+          await noble.startScanningAsync([], true);
           this.logger.log('Сканування успішно запущено');
         } catch (error) {
           this.logger.error(`Помилка при запуску сканування: ${error.message}`);
         }
       } else {
-        this.logger.warn('Bluetooth не готовий: ' + state);
+        this.logger.warn(`Bluetooth не готовий: ${state}`);
       }
     });
 
-    noble.on('discover', (peripheral) => {
-      const localName = peripheral.advertisement.localName || 'Unnamed Device';
-      this.logger.log(
-        `Знайдено пристрій: ${localName}, UUID: ${peripheral.uuid}`,
-      );
-    });
+    this.logger.log(`Поточний стан Bluetooth: ${noble.state}`);
 
-    this.logger.log('Очікуємо стан Bluetooth...');
+    if (noble.state === 'poweredOn') {
+      this.logger.log('Bluetooth вже увімкнено, запускаємо сканування...');
+      try {
+        await noble.startScanningAsync([], true);
+        this.logger.log('Сканування успішно запущено');
+      } catch (error) {
+        this.logger.error(`Помилка при запуску сканування: ${error.message}`);
+      }
+    }
   }
 
   private async connectToDevice(peripheral: noble.Peripheral) {
