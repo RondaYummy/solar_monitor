@@ -46,9 +46,9 @@ export class BluetoothService implements OnModuleInit {
       }
     });
 
-    this.logger.log(`Поточний стан Bluetooth: ${noble.state}`);
+    this.logger.log(`Поточний стан Bluetooth: ${noble._state}`);
 
-    if (noble.state === 'poweredOn') {
+    if (noble._state === 'poweredOn') {
       this.logger.log('Bluetooth вже увімкнено, запускаємо сканування...');
       try {
         await noble.startScanningAsync([], true);
