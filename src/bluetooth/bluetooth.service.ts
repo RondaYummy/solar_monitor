@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as noble from '@abandonware/noble';
-import { exec } from 'child_process';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
@@ -8,68 +7,7 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth...');
-    this.enableBluetoothCLI();
     this.setupBluetooth();
-  }
-
-  private enableBluetoothCLI() {
-    this.logger.log('Спроба увімкнути Bluetooth через bluetoothctl...');
-
-    exec('bluetoothctl power on', (error, stdout, stderr) => {
-      if (error) {
-        this.logger.error(`Помилка увімкнення Bluetooth: ${error.message}`);
-        return;
-      }
-
-      if (stderr) {
-        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
-        return;
-      }
-
-      this.logger.log(`Bluetooth увімкнено: ${stdout}`);
-    });
-
-    exec('bluetoothctl agent on', (error, stdout, stderr) => {
-      if (error) {
-        this.logger.error(`Помилка Bluetooth: ${error.message}`);
-        return;
-      }
-
-      if (stderr) {
-        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
-        return;
-      }
-
-      this.logger.log(`Bluetooth: ${stdout}`);
-    });
-
-    exec('bluetoothctl default-agent', (error, stdout, stderr) => {
-      if (error) {
-        this.logger.error(`Помилка Bluetooth: ${error.message}`);
-        return;
-      }
-
-      if (stderr) {
-        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
-        return;
-      }
-
-      this.logger.log(`Bluetooth: ${stdout}`);
-    });
-
-    exec('bluetoothctl scan on', (error, stdout, stderr) => {
-      if (error) {
-        this.logger.error(`Помилка Bluetooth: ${error.message}`);
-        return;
-      }
-
-      if (stderr) {
-        this.logger.error(`Система повідомляє про помилку: ${stderr}`);
-        return;
-      }
-
-      this.logger.log(`Bluetooth: ${stdout}`);
-    });
   }
 
   private async setupBluetooth() {
