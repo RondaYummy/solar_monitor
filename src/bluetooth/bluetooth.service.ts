@@ -7,57 +7,51 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth...');
-    this.setupBluetooth();
+    noble.on('stateChange', async (state) => {
+      if (state === 'poweredOn') {
+        await this.startScanning();
+      }
+    });
+    this.logger.log('Bluetooth initialization complete.');
+  }
+
+  private async startScanning() {
+    this.logger.log('Запускаємо сканування...');
+    try {
+      await noble.startScanningAsync([], true);
+      this.logger.log('Сканування запущено');
+    } catch (error) {
+      this.logger.error(`Помилка запуску сканування: ${error.message}`);
+    }
   }
 
   private async setupBluetooth() {
     this.logger.log(`Операційна система: ${process.platform}`);
 
-    await noble.startScanningAsync([], true);
-
-    // Коли стан адаптера зміниться
     noble.on('stateChange', async (state) => {
       this.logger.log(`Стан Bluetooth змінився на: ${state}`);
 
-      // Перевіряємо стан більш детально
-      if (state === 'unsupported') {
-        this.logger.error(
-          'Bluetooth Low Energy не підтримується на цьому пристрої',
-        );
-      } else if (state === 'unauthorized') {
-        this.logger.error('Немає прав доступу до Bluetooth');
-      } else if (state === 'poweredOff') {
-        this.logger.error('Bluetooth вимкнено');
-      } else if (state === 'poweredOn') {
-        this.logger.log('Bluetooth увімкнено, починаємо сканування...');
+      if (state === 'poweredOn') {
+        this.logger.log('Bluetooth увімкнено, запускаємо сканування...');
         try {
-          await noble.startScanningAsync([], true);
+          await noble.startScanningAsync([], true); // true - режим дублювання
           this.logger.log('Сканування успішно запущено');
         } catch (error) {
-          this.logger.error(`Помилка при запуску сканування: ${error}`);
+          this.logger.error(`Помилка при запуску сканування: ${error.message}`);
         }
+      } else {
+        this.logger.warn('Bluetooth не готовий: ' + state);
       }
     });
 
-    // Коли знайдено пристрій
-    noble.on('discover', async (peripheral) => {
-      // const localName = peripheral.advertisement.localName || 'Unnamed Device';
-      const manufacturerData =
-        peripheral.advertisement.manufacturerData?.toString('hex');
+    noble.on('discover', (peripheral) => {
+      const localName = peripheral.advertisement.localName || 'Unnamed Device';
       this.logger.log(
-        `Знайдено пристрій: ${manufacturerData} ${peripheral.uuid}`,
+        `Знайдено пристрій: ${localName}, UUID: ${peripheral.uuid}`,
       );
-
-      // Якщо це потрібний вам пристрій (перевіряємо за виробником)
-      if (manufacturerData.startsWith('650b88a0c84780')) {
-        //   noble.stopScanning();
-        try {
-          await this.connectToDevice(peripheral);
-        } catch (error) {
-          this.logger.error(`Не вдалось підключитись: ${error}`);
-        }
-      }
     });
+
+    this.logger.log('Очікуємо стан Bluetooth...');
   }
 
   private async connectToDevice(peripheral: noble.Peripheral) {
