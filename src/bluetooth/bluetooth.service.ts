@@ -9,12 +9,6 @@ export class BluetoothService implements OnModuleInit {
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth...');
 
-    noble.on('stateChange', async (state) => {
-      if (state === 'poweredOn') {
-        await this.startScanning();
-      }
-    });
-
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
@@ -51,7 +45,6 @@ export class BluetoothService implements OnModuleInit {
 
   private async setupBluetooth() {
     this.logger.log(`Operating system: ${process.platform}`);
-    this.logger.log(`Current Bluetooth status: ${noble._state}`);
 
     noble.on('stateChange', async (state) => {
       this.logger.log(`The Bluetooth status has changed to: ${state}`);
@@ -91,6 +84,7 @@ export class BluetoothService implements OnModuleInit {
 
     // Далі можна отримати сервіси та характеристики
     const services = await peripheral.discoverServicesAsync([]);
+    console.log(services, 'services');
     for (const service of services) {
       const characteristics = await service.discoverCharacteristicsAsync([]);
       this.logger.log(
