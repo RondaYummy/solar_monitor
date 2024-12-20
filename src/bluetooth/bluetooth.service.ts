@@ -14,16 +14,16 @@ export class BluetoothService implements OnModuleInit {
     });
 
     noble.on('discover', async (peripheral) => {
-      // const localName = peripheral.advertisement.localName || 'Unnamed Device';
+      const localName = peripheral.advertisement.localName || 'Unnamed Device';
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       this.logger.log(
-        `Знайдено пристрій: ${manufacturerData} ${peripheral.uuid}`,
+        `Знайдено пристрій: [${manufacturerData}] (${peripheral.uuid}): ${localName}`,
       );
+      console.log(peripheral.advertisement, 'peripheral.advertisement');
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником)
       if (manufacturerData.startsWith('650b88a0c84780')) {
-        //   noble.stopScanning();
         try {
           await this.connectToDevice(peripheral);
         } catch (error) {
