@@ -78,9 +78,18 @@ export class BluetoothService implements OnModuleInit {
       `Connection to ${peripheral.advertisement.localName || peripheral.address}...`,
     );
     await peripheral.connectAsync();
-    this.logger.log(
-      `${peripheral.advertisement.localName || peripheral.address} connected!`,
-    );
+    // this.logger.log(
+    //   `${peripheral.advertisement.localName || peripheral.address} connected!`,
+    // );
+
+    this.logger.log(`Peripheral state: ${peripheral.state}`);
+    if (peripheral.state === 'connected') {
+      this.logger.log(
+        `${peripheral.advertisement.localName || peripheral.address} connected!`,
+      );
+    } else {
+      this.logger.warn('Device is not connected.');
+    }
 
     // Далі можна отримати сервіси та характеристики
     const services = await peripheral.discoverServicesAsync([]);
