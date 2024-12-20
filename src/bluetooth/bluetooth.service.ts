@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as noble from '@abandonware/noble';
+import { config } from 'configs/main.config';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
@@ -19,7 +20,10 @@ export class BluetoothService implements OnModuleInit {
         peripheral.advertisement.manufacturerData?.toString('hex');
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
-      if (manufacturerData.startsWith('650b88a0c84780')) {
+      if (
+        config.allowedDevices.includes(manufacturerData) ||
+        config.allowedDevices.includes(peripheral.advertisement.localName)
+      ) {
         this.logger.log(
           `[${manufacturerData}] Discovered device: ${peripheral.address} (${peripheral.advertisement.localName || 'Unknown'})`,
         );
