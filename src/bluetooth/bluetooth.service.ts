@@ -13,27 +13,33 @@ export class BluetoothService implements OnModuleInit {
       }
     });
 
-    noble.on('discover', async (peripheral) => {
-      const localName = peripheral.advertisement.localName || 'Unnamed Device';
-      const manufacturerData =
-        peripheral.advertisement.manufacturerData?.toString('hex');
-      this.logger.log(
-        `Знайдено пристрій: [${manufacturerData}] (${peripheral.uuid}): ${localName}`,
-      );
+    noble.on('discover', (peripheral) => {
       console.log(
-        peripheral.advertisement.manufacturerData?.toString('hex'),
-        'peripheral.advertisement',
+        `Discovered device: ${peripheral.address} (${peripheral.advertisement.localName || 'Unknown'})`,
       );
-
-      // Якщо це потрібний вам пристрій (перевіряємо за виробником)
-      if (manufacturerData.startsWith('650b88a0c84780')) {
-        try {
-          await this.connectToDevice(peripheral);
-        } catch (error) {
-          this.logger.error(`Не вдалось підключитись: ${error}`);
-        }
-      }
     });
+
+    // noble.on('discover', async (peripheral) => {
+    //   const localName = peripheral.advertisement.localName || 'Unnamed Device';
+    //   const manufacturerData =
+    //     peripheral.advertisement.manufacturerData?.toString('hex');
+    //   this.logger.log(
+    //     `Знайдено пристрій: [${manufacturerData}] (${peripheral.uuid}): ${localName}`,
+    //   );
+    //   console.log(
+    //     peripheral.advertisement.manufacturerData?.toString('hex'),
+    //     'peripheral.advertisement',
+    //   );
+
+    //   // Якщо це потрібний вам пристрій (перевіряємо за виробником)
+    //   if (manufacturerData.startsWith('650b88a0c84780')) {
+    //     try {
+    //       await this.connectToDevice(peripheral);
+    //     } catch (error) {
+    //       this.logger.error(`Не вдалось підключитись: ${error}`);
+    //     }
+    //   }
+    // });
     this.logger.log('Bluetooth initialization complete.');
 
     await this.setupBluetooth();
