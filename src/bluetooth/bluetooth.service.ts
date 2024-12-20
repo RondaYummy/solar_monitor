@@ -7,6 +7,7 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth...');
+
     noble.on('stateChange', async (state) => {
       if (state === 'poweredOn') {
         await this.startScanning();
@@ -16,12 +17,12 @@ export class BluetoothService implements OnModuleInit {
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
-      console.log(
-        `[${manufacturerData}] Discovered device: ${peripheral.address} (${peripheral.advertisement.localName || 'Unknown'})`,
-      );
 
-      // Якщо це потрібний вам пристрій (перевіряємо за виробником)
+      // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
       if (manufacturerData.startsWith('650b88a0c84780')) {
+        this.logger.log(
+          `[${manufacturerData}] Discovered device: ${peripheral.address} (${peripheral.advertisement.localName || 'Unknown'})`,
+        );
         try {
           await this.connectToDevice(peripheral);
         } catch (error) {
@@ -36,61 +37,61 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async startScanning() {
-    this.logger.log('Запускаємо сканування...');
     try {
       await noble.startScanningAsync([], true);
-      this.logger.log('Сканування запущено');
+      this.logger.log('Scanning has started...');
     } catch (error) {
-      this.logger.error(`Помилка запуску сканування: ${error.message}`);
+      this.logger.error(`Scan startup error: ${error.message}`);
     }
   }
 
   private async setupBluetooth() {
-    this.logger.log(`Операційна система: ${process.platform}`);
+    this.logger.log(`Operating system: ${process.platform}`);
+    this.logger.log(`Current Bluetooth status: ${noble._state}`);
 
     noble.on('stateChange', async (state) => {
-      this.logger.log(`Стан Bluetooth змінився на: ${state}`);
+      this.logger.log(`The Bluetooth status has changed to: ${state}`);
 
       if (state === 'poweredOn') {
-        this.logger.log('Bluetooth увімкнено, запускаємо сканування...');
+        this.logger.log('Bluetooth is turned on, start scanning...');
         try {
-          await noble.startScanningAsync([], true);
-          this.logger.log('Сканування успішно запущено');
+          await this.startScanning();
         } catch (error) {
-          this.logger.error(`Помилка при запуску сканування: ${error.message}`);
+          this.logger.error(`[poweredOn] Scan startup error: ${error.message}`);
         }
       } else {
-        this.logger.warn(`Bluetooth не готовий: ${state}`);
+        this.logger.warn(`Bluetooth is not ready: ${state}`);
       }
     });
 
-    this.logger.log(`Поточний стан Bluetooth: ${noble._state}`);
-
     if (noble._state === 'poweredOn') {
-      this.logger.log('Bluetooth вже увімкнено, запускаємо сканування...');
+      this.logger.log('Bluetooth is already on, start scanning...');
       try {
-        await noble.startScanningAsync([], true);
-        this.logger.log('Сканування успішно запущено');
+        await this.startScanning();
       } catch (error) {
-        this.logger.error(`Помилка при запуску сканування: ${error.message}`);
+        this.logger.error(
+          `[setupBluetooth] Scan startup error: ${error.message}`,
+        );
       }
     }
   }
 
   private async connectToDevice(peripheral: noble.Peripheral) {
-    this.logger.log(`Підключення...`);
+    this.logger.log(
+      `Connection to ${peripheral.advertisement.localName || peripheral.address}...`,
+    );
     await peripheral.connectAsync();
-    this.logger.log('Підключено!');
+    this.logger.log(
+      `${peripheral.advertisement.localName || peripheral.address} connected!`,
+    );
 
     // Далі можна отримати сервіси та характеристики
     const services = await peripheral.discoverServicesAsync([]);
     for (const service of services) {
       const characteristics = await service.discoverCharacteristicsAsync([]);
       this.logger.log(
-        `Сервіс: ${service.uuid}, Характеристик: ${characteristics.length}`,
+        `Service: ${service.uuid}, Features: ${characteristics.length}`,
       );
     }
-
-    // Якщо потрібна взаємодія з конкретним сервісом/характеристикою - робіть її тут.
   }
 }
