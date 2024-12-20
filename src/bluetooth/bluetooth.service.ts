@@ -20,7 +20,10 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(
         `Знайдено пристрій: [${manufacturerData}] (${peripheral.uuid}): ${localName}`,
       );
-      console.log(peripheral.advertisement, 'peripheral.advertisement');
+      console.log(
+        peripheral.advertisement.manufacturerData?.toString('hex'),
+        'peripheral.advertisement',
+      );
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником)
       if (manufacturerData.startsWith('650b88a0c84780')) {
