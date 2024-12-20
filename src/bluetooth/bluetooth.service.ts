@@ -12,6 +12,25 @@ export class BluetoothService implements OnModuleInit {
         await this.startScanning();
       }
     });
+
+    noble.on('discover', async (peripheral) => {
+      // const localName = peripheral.advertisement.localName || 'Unnamed Device';
+      const manufacturerData =
+        peripheral.advertisement.manufacturerData?.toString('hex');
+      this.logger.log(
+        `Знайдено пристрій: ${manufacturerData} ${peripheral.uuid}`,
+      );
+
+      // Якщо це потрібний вам пристрій (перевіряємо за виробником)
+      if (manufacturerData.startsWith('650b88a0c84780')) {
+        //   noble.stopScanning();
+        try {
+          await this.connectToDevice(peripheral);
+        } catch (error) {
+          this.logger.error(`Не вдалось підключитись: ${error}`);
+        }
+      }
+    });
     this.logger.log('Bluetooth initialization complete.');
 
     await this.setupBluetooth();
