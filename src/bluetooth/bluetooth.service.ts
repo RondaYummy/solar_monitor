@@ -139,7 +139,7 @@ export class BluetoothService implements OnModuleInit {
           if (characteristic.properties.includes('read')) {
             const data = await characteristic.readAsync();
             this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
-            const batteryLevel = data[0]; // Перший байт
+            const batteryLevel = data.readUInt8(0);
             this.logger.log(`\x1b[0mBattery Level: ${batteryLevel}%`);
           }
         }
