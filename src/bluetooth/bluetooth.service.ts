@@ -78,14 +78,9 @@ export class BluetoothService implements OnModuleInit {
       `Connection to ${peripheral.advertisement.localName || peripheral.address}...`,
     );
     await peripheral.connectAsync();
-    // this.logger.log(
-    //   `${peripheral.advertisement.localName || peripheral.address} connected!`,
-    // );
-
-    this.logger.log(`Peripheral state: ${peripheral.state}`);
     if (peripheral.state === 'connected') {
       this.logger.log(
-        `${peripheral.advertisement.localName || peripheral.address} connected!`,
+        `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
       );
     } else {
       this.logger.warn('Device is not connected.');
