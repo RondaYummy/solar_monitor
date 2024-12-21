@@ -138,7 +138,7 @@ export class BluetoothService implements OnModuleInit {
         if (characteristic.properties.includes('read')) {
           const data = await characteristic.readAsync();
           this.logger.log(
-            `Data from characteristic ${characteristic.uuid}: ${Buffer.from(data, 'hex').toString('utf8')}`,
+            `Data from characteristic ${characteristic.uuid}: ${Buffer.from(data.toString('hex'), 'hex').toString('utf8')}`,
           );
         }
 
