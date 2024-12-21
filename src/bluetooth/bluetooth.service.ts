@@ -36,15 +36,8 @@ export class BluetoothService implements OnModuleInit {
     noble.on('uncaughtException', (error) => {
       this.logger.error(`Uncaught exception: ${error}`);
     });
-    noble.on('disconnect', () => {
-      this.logger.error(`@ Disconnect @`);
-    });
-    noble.once('characteristicsDiscover', async (characteristics) => {
-      console.log(characteristics, 'characteristics');
-    });
 
     this.logger.log('Bluetooth initialization complete.');
-
     await this.setupBluetooth();
   }
 
@@ -135,6 +128,30 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(
         `Service: ${service.uuid}, Features: ${characteristics.length}`,
       );
+
+      for (const characteristic of characteristics) {
+        this.logger.log(
+          `Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`,
+        );
+
+        // Якщо характеристика підтримує читання
+        if (characteristic.properties.includes('read')) {
+          const data = await characteristic.readAsync();
+          this.logger.log(
+            `Data from characteristic ${characteristic.uuid}: ${data.toString('hex')}`,
+          );
+        }
+
+        // Якщо характеристика підтримує підписку (notify)
+        if (characteristic.properties.includes('notify')) {
+          await characteristic.subscribeAsync();
+          characteristic.on('data', (data) => {
+            this.logger.log(
+              `Notification from ${characteristic.uuid}: ${data.toString('hex')}`,
+            );
+          });
+        }
+      }
     }
   }
 }
