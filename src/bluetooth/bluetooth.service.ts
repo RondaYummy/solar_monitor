@@ -5,6 +5,7 @@ import { config } from 'configs/main.config';
 @Injectable()
 export class BluetoothService implements OnModuleInit {
   private readonly logger = new Logger(BluetoothService.name);
+  private connectedDevice: noble.Peripheral | null = null;
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth...');
@@ -46,17 +47,18 @@ export class BluetoothService implements OnModuleInit {
     await this.setupBluetooth();
   }
 
-  private async disconnectFromDevice(peripheral: noble.Peripheral) {
+  private async disconnectFromDevice() {
     try {
-      if (peripheral.state === 'connected') {
+      if (this.connectedDevice.state === 'connected') {
         this.logger.log(
-          `Disconnecting from \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[0m...`,
+          `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[0m...`,
         );
-        await peripheral.disconnectAsync();
-        peripheral.removeAllListeners();
+        await this.connectedDevice.disconnectAsync();
+        this.connectedDevice.removeAllListeners();
+        this.connectedDevice = null;
       } else {
         this.logger.warn(
-          `Cannot disconnect: ${peripheral.advertisement.localName || peripheral.address} is not connected.`,
+          `Cannot disconnect: ${this.connectedDevice.advertisement.localName || this.connectedDevice.address} is not connected.`,
         );
       }
     } catch (error) {
@@ -68,9 +70,6 @@ export class BluetoothService implements OnModuleInit {
     try {
       await noble.startScanningAsync([], true);
       this.logger.log('Scanning has started...');
-      setTimeout(async () => {
-        await this.disconnectFromDevice(noble);
-      }, 10000);
     } catch (error) {
       this.logger.error(`Scan startup error: ${error.message}`);
     }
@@ -115,6 +114,11 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(
         `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
       );
+      this.connectedDevice = peripheral;
+
+      setTimeout(async () => {
+        await this.disconnectFromDevice(noble);
+      }, 10000);
     } else {
       this.logger.warn('Device is not connected.');
     }
