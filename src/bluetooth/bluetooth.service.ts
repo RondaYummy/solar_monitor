@@ -20,7 +20,7 @@ export class BluetoothService implements OnModuleInit {
         config.allowedDevices.includes(peripheral.advertisement.localName)
       ) {
         this.logger.log(
-          `[${manufacturerData}] Discovered device: ${peripheral.address} (\x1b[31m${peripheral.advertisement.localName || 'Unknown'}\x1b[0m)`,
+          `[${manufacturerData}] Discovered device: ${peripheral.address} (\x1b[31m${peripheral.advertisement.localName || 'Unknown'}\x1b[32m)`,
         );
         try {
           await this.connectToDevice(peripheral);
@@ -43,7 +43,7 @@ export class BluetoothService implements OnModuleInit {
 
   private async disconnectFromDevice() {
     try {
-      if (this.connectedDevice.state === 'connected') {
+      if (this.connectedDevice?.state === 'connected') {
         this.logger.log(
           `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[32m...`,
         );
@@ -89,7 +89,7 @@ export class BluetoothService implements OnModuleInit {
       }
     });
 
-    if (noble._state === 'poweredOn') {
+    if (noble?._state === 'poweredOn') {
       this.logger.log('Bluetooth is already on, start scanning...');
       try {
         await this.startScanning();
@@ -106,7 +106,7 @@ export class BluetoothService implements OnModuleInit {
       `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
     );
     await peripheral.connectAsync();
-    if (peripheral.state === 'connected') {
+    if (peripheral?.state === 'connected') {
       this.logger.log(
         `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
       );
