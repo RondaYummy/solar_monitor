@@ -36,12 +36,6 @@ export class BluetoothService implements OnModuleInit {
     noble.on('uncaughtException', (error) => {
       this.logger.error(`Uncaught exception: ${error}`);
     });
-    noble.on('disconnect', () => {
-      this.logger.warn(
-        `\x1b[34m${this.connectedDevice.advertisement.localName || this.connectedDevice.address} disconnected.`,
-      );
-      this.connectedDevice = null;
-    });
 
     this.logger.log('Bluetooth initialization complete.');
 
@@ -57,6 +51,10 @@ export class BluetoothService implements OnModuleInit {
       );
       await this.connectedDevice.disconnectAsync();
       this.connectedDevice.removeAllListeners();
+      this.logger.warn(
+        `\x1b[34m${this.connectedDevice.advertisement.localName || this.connectedDevice.address} disconnected.`,
+      );
+      this.connectedDevice = null;
     } catch (error) {
       this.logger.error(`Error disconnecting from device: ${error.message}`);
     }
@@ -75,7 +73,9 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Operating system: ${process.platform}`);
 
     noble.on('stateChange', async (state) => {
-      this.logger.log(`The Bluetooth status has changed to: \x1b[31m${state}`);
+      this.logger.log(
+        `The Bluetooth status has changed to: \x1b[31m${state}\x1b[32m.`,
+      );
 
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
@@ -114,6 +114,7 @@ export class BluetoothService implements OnModuleInit {
 
       setTimeout(async () => {
         await this.disconnectFromDevice();
+        await this.startScanning();
       }, 10000);
     } else {
       this.logger.warn('Device is not connected.');
