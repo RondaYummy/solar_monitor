@@ -19,7 +19,7 @@ export class BluetoothService implements OnModuleInit {
         config.allowedDevices.includes(peripheral.advertisement.localName)
       ) {
         this.logger.log(
-          `[${manufacturerData}] Discovered device: ${peripheral.address} (${peripheral.advertisement.localName || 'Unknown'})`,
+          `[${manufacturerData}] Discovered device: ${peripheral.address} (\x1b${peripheral.advertisement.localName || 'Unknown'}\x1b[0m)`,
         );
         try {
           await this.connectToDevice(peripheral);
@@ -27,6 +27,18 @@ export class BluetoothService implements OnModuleInit {
           this.logger.error(`Error discover: ${error}`);
         }
       }
+    });
+
+    noble.on('warning', (message) => {
+      this.logger.warn(`Warning: ${message}`);
+    });
+    noble.on('uncaughtException', (error) => {
+      this.logger.error(`Uncaught exception: ${error}`);
+    });
+    noble.on('disconnect', (peripheral) => {
+      this.logger.warn(
+        `\x1b[34m${peripheral.advertisement.localName || peripheral.address} disconnected.`,
+      );
     });
 
     this.logger.log('Bluetooth initialization complete.');
@@ -47,7 +59,7 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Operating system: ${process.platform}`);
 
     noble.on('stateChange', async (state) => {
-      this.logger.log(`The Bluetooth status has changed to: ${state}`);
+      this.logger.log(`The Bluetooth status has changed to: \x1b${state}`);
 
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
@@ -75,7 +87,7 @@ export class BluetoothService implements OnModuleInit {
 
   private async connectToDevice(peripheral: noble.Peripheral) {
     this.logger.log(
-      `Connection to ${peripheral.advertisement.localName || peripheral.address}...`,
+      `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}...\x1b[0m`,
     );
     await peripheral.connectAsync();
     if (peripheral.state === 'connected') {
