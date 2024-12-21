@@ -117,7 +117,7 @@ export class BluetoothService implements OnModuleInit {
       this.connectedDevice = peripheral;
 
       setTimeout(async () => {
-        await this.disconnectFromDevice(noble);
+        await this.disconnectFromDevice();
       }, 10000);
     } else {
       this.logger.warn('Device is not connected.');
