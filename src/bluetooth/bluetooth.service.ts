@@ -49,18 +49,14 @@ export class BluetoothService implements OnModuleInit {
 
   private async disconnectFromDevice() {
     try {
-      if (this.connectedDevice.state === 'connected') {
-        this.logger.log(
-          `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[0m...`,
-        );
-        await this.connectedDevice.disconnectAsync();
-        this.connectedDevice.removeAllListeners();
-        this.connectedDevice = null;
-      } else {
-        this.logger.warn(
-          `Cannot disconnect: ${this.connectedDevice.advertisement.localName || this.connectedDevice.address} is not connected.`,
-        );
-      }
+      console.log(this.connectedDevice.state);
+
+      this.logger.log(
+        `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[0m...`,
+      );
+      await this.connectedDevice.disconnectAsync();
+      this.connectedDevice.removeAllListeners();
+      this.connectedDevice = null;
     } catch (error) {
       this.logger.error(`Error disconnecting from device: ${error.message}`);
     }
@@ -79,7 +75,7 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Operating system: ${process.platform}`);
 
     noble.on('stateChange', async (state) => {
-      this.logger.log(`The Bluetooth status has changed to: \x1b${state}`);
+      this.logger.log(`The Bluetooth status has changed to: \x1b[32m${state}`);
 
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
@@ -112,7 +108,7 @@ export class BluetoothService implements OnModuleInit {
     await peripheral.connectAsync();
     if (peripheral.state === 'connected') {
       this.logger.log(
-        `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
+        `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[0m connected!`,
       );
       this.connectedDevice = peripheral;
 
