@@ -36,6 +36,9 @@ export class BluetoothService implements OnModuleInit {
     noble.on('uncaughtException', (error) => {
       this.logger.error(`Uncaught exception: ${error}`);
     });
+    noble.on('disconnect', () => {
+      this.logger.error(`@ Disconnect @`);
+    });
 
     this.logger.log('Bluetooth initialization complete.');
 
@@ -44,16 +47,17 @@ export class BluetoothService implements OnModuleInit {
 
   private async disconnectFromDevice() {
     try {
-      console.log(this.connectedDevice.state);
+      if (this.connectedDevice.state === 'connected') {
+        this.logger.log(
+          `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[32m...`,
+        );
+        await this.connectedDevice.disconnectAsync();
+        await this.connectedDevice.removeAllListeners();
+        this.logger.warn(
+          `\x1b[34m${this.connectedDevice.advertisement.localName || this.connectedDevice.address} disconnected.`,
+        );
+      }
 
-      this.logger.log(
-        `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[0m...`,
-      );
-      await this.connectedDevice.disconnectAsync();
-      this.connectedDevice.removeAllListeners();
-      this.logger.warn(
-        `\x1b[34m${this.connectedDevice.advertisement.localName || this.connectedDevice.address} disconnected.`,
-      );
       this.connectedDevice = null;
     } catch (error) {
       this.logger.error(`Error disconnecting from device: ${error.message}`);
