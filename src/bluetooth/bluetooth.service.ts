@@ -39,6 +39,9 @@ export class BluetoothService implements OnModuleInit {
     noble.on('disconnect', () => {
       this.logger.error(`@ Disconnect @`);
     });
+    noble.once('characteristicsDiscover', async (characteristics) => {
+      console.log(characteristics, 'characteristics');
+    });
 
     this.logger.log('Bluetooth initialization complete.');
 
