@@ -138,8 +138,9 @@ export class BluetoothService implements OnModuleInit {
         if (service.uuid === '180f' && characteristic.uuid === '2a19') {
           if (characteristic.properties.includes('read')) {
             const data = await characteristic.readAsync();
-            const batteryLevel = data[0]; // Рівень заряду в процентах
-            this.logger.log(`Battery Level: ${batteryLevel}%`);
+            this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
+            const batteryLevel = data[0]; // Перший байт
+            this.logger.log(`\x1b[0mBattery Level: ${batteryLevel}%`);
           }
         }
 
