@@ -19,7 +19,7 @@ export class BluetoothService implements OnModuleInit {
         config.allowedDevices.includes(peripheral.advertisement.localName)
       ) {
         this.logger.log(
-          `[${manufacturerData}] Discovered device: ${peripheral.address} (\x1b${peripheral.advertisement.localName || 'Unknown'}\x1b[0m)`,
+          `[${manufacturerData}] Discovered device: ${peripheral.address} (\x1b[31m${peripheral.advertisement.localName || 'Unknown'}\x1b[0m)`,
         );
         try {
           await this.connectToDevice(peripheral);
@@ -46,10 +46,31 @@ export class BluetoothService implements OnModuleInit {
     await this.setupBluetooth();
   }
 
+  private async disconnectFromDevice(peripheral: noble.Peripheral) {
+    try {
+      if (peripheral.state === 'connected') {
+        this.logger.log(
+          `Disconnecting from \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[0m...`,
+        );
+        await peripheral.disconnectAsync();
+        peripheral.removeAllListeners();
+      } else {
+        this.logger.warn(
+          `Cannot disconnect: ${peripheral.advertisement.localName || peripheral.address} is not connected.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Error disconnecting from device: ${error.message}`);
+    }
+  }
+
   private async startScanning() {
     try {
       await noble.startScanningAsync([], true);
       this.logger.log('Scanning has started...');
+      setTimeout(async () => {
+        await this.disconnectFromDevice(noble);
+      }, 10000);
     } catch (error) {
       this.logger.error(`Scan startup error: ${error.message}`);
     }
