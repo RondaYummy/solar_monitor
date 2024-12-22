@@ -59,5 +59,5 @@ cd /root/solar_monitor
 
 while [ 1 ]; do
     check_deploy 2>&1
-    sleep 3600
+    sleep 30
 done
