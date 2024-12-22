@@ -58,7 +58,7 @@ export class BluetoothService implements OnModuleInit {
         .join(', ');
 
       this.logger.log(`Connected devices: ${connectedDeviceNames || 'None'}`);
-    }, 10000); // 10 секунд
+    }, 20000); // 20 секунд
   }
 
   private async startScanning() {
@@ -66,7 +66,6 @@ export class BluetoothService implements OnModuleInit {
       // Battery Service '180f'
       await noble.startScanningAsync([], true);
       this.logger.log('Scanning has started...');
-      this.eventEmitter.emit('battery.low', { level: 99 });
     } catch (error) {
       this.logger.error(`Scan startup error: ${error.message}`);
     }
@@ -119,6 +118,10 @@ export class BluetoothService implements OnModuleInit {
           `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
         );
         this.connectedDevices.set(deviceId, peripheral);
+        const connectedDeviceNames = Array.from(this.connectedDevices.values())
+          .map((device) => device.advertisement.localName || device.address)
+          .join(', ');
+        this.eventEmitter.emit('devices.connected', { devices: connectedDeviceNames });
 
         // Слухач на відключення та запуск скану нових повторно
         // peripheral.once('disconnect', async () => {

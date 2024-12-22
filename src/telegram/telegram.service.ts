@@ -33,6 +33,12 @@ export class TelegramService implements OnModuleInit {
     await this.sendMessage(message);
   }
 
+  @OnEvent('devices.connected', { async: true })
+  async handleConnectedDevicesEvent(payload: { devices: number; }) {
+    const message = `Connected devices: ${payload.devices}`;
+    await this.sendMessage(message);
+  }
+
   async sendMessage(text: string, channelId: string = this.channelId) {
     try {
       await this.bot.api.sendMessage(channelId, text);
