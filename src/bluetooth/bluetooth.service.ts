@@ -134,6 +134,17 @@ export class BluetoothService implements OnModuleInit {
           `Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`,
         );
 
+        if (characteristic.uuid === 'f000ffc0-0451-4000-b000-000000000000') {
+          if (characteristic.properties.includes('read')) {
+            const data = await characteristic.readAsync();
+            this.logger.log(
+              `ФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФ: ${data.toString('hex')}`,
+            );
+            const batteryLevel = data.readUInt8(0);
+            this.logger.log(`\x1b[0mФФФФФФФФФФФФФФФФФФФ: ${batteryLevel}%`);
+          }
+        }
+
         // Читання рівня заряду батареї
         if (service.uuid === '180f' && characteristic.uuid === '2a19') {
           if (characteristic.properties.includes('read')) {
