@@ -4,7 +4,6 @@ module.exports = {
       name: '⛅️ Solar Monitor',
       script: 'dist/src/main.js',
       exec_mode: 'fork',
-      instances: 0,
       autorestart: true,
       max_restarts: 10,
       instances: 1,
