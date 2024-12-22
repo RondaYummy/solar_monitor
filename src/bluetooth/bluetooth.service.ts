@@ -9,12 +9,13 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
-    noble.removeAllListeners();
 
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
+
+      (peripheral as any).removeAllListeners();
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
       if (
