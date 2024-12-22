@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as noble from '@abandonware/noble';
 import { config } from 'configs/main.config';
-import { Buffer } from 'buffer';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
