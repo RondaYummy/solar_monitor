@@ -1,11 +1,14 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as noble from '@abandonware/noble';
 import { config } from 'configs/main.config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
   private readonly logger = new Logger(BluetoothService.name);
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
+
+  constructor(private eventEmitter: EventEmitter2) { }
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
@@ -164,6 +167,7 @@ export class BluetoothService implements OnModuleInit {
               this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
               const batteryLevel = data.readUInt8(0);
               this.logger.log(`\x1b[0mBattery Level: ${batteryLevel}%`);
+              this.eventEmitter.emit('battery.low', { level: batteryLevel });
             }
           }
 

@@ -5,6 +5,9 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   TELEGRAM_BOT_TOKEN: string;
+  @IsString()
+  @IsNotEmpty()
+  TELEGRAM_CHANNEL_ID: string;
 }
 
 export function validate(config: Record<string, unknown>) {
