@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as noble from '@abandonware/noble';
 import { config } from 'configs/main.config';
-import { Buffer } from 'buffer';
+import { Buffer } from 'node:buffer';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
@@ -185,9 +185,8 @@ export class BluetoothService implements OnModuleInit {
           if (characteristic.properties.includes('notify')) {
             await characteristic.subscribeAsync();
             characteristic.on('data', (data) => {
-              const buffer = Buffer.from(data, 'hex');
               this.logger.log(
-                `Notification from ${characteristic.uuid}: ${buffer.toString('utf8')}`,
+                `Notification from ${characteristic.uuid}: ${data.toString('utf8')}`,
               );
             });
           }
