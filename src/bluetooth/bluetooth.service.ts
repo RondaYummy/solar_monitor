@@ -8,8 +8,7 @@ export class BluetoothService implements OnModuleInit {
   private connectedDevice: noble.Peripheral | null = null;
 
   async onModuleInit() {
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    this.logger.log(noble?._state + ': Initializing Bluetooth...');
+    this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
 
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
