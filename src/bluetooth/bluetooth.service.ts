@@ -12,7 +12,6 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
-    this.eventEmitter.emit('battery.low', { level: 99 });
 
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
@@ -67,6 +66,7 @@ export class BluetoothService implements OnModuleInit {
       // Battery Service '180f'
       await noble.startScanningAsync([], true);
       this.logger.log('Scanning has started...');
+      this.eventEmitter.emit('battery.low', { level: 99 });
     } catch (error) {
       this.logger.error(`Scan startup error: ${error.message}`);
     }
