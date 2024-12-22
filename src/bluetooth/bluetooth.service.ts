@@ -117,6 +117,7 @@ export class BluetoothService implements OnModuleInit {
       peripheral.address;
 
     try {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       this.logger.log(
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
@@ -126,7 +127,7 @@ export class BluetoothService implements OnModuleInit {
           `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
         );
         this.connectedDevices.set(deviceId, peripheral);
-        await this.startScanning();
+        // await this.startScanning();
         // setTimeout(async () => {
         //   await this.disconnectFromDevice();
         //   await this.startScanning();
