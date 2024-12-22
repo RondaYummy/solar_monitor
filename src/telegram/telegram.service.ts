@@ -10,6 +10,9 @@ export class TelegramService implements OnModuleInit {
   private logger = new Logger(TelegramService.name);
 
   async onModuleInit() {
+    const message = `⚠️ Low battery detected: ${payload.level}%`;
+    await this.sendMessage(message);
+
     this.bot.start({
       allowed_updates: ['message', 'callback_query'],
     });
