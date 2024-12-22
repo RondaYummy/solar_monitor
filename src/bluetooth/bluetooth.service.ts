@@ -54,27 +54,8 @@ export class BluetoothService implements OnModuleInit {
         .join(', ');
 
       this.logger.log(`Connected devices: ${connectedDeviceNames || 'None'}`);
-    }, 5000); // 5000 мс = 5 секунд
+    }, 10000); // 10 секунд
   }
-
-  // private async disconnectFromDevice() {
-  //   try {
-  //     if (this.connectedDevice?.state === 'connected') {
-  //       this.logger.log(
-  //         `Disconnecting from \x1b[31m${this.connectedDevice.advertisement.localName || this.connectedDevice.address}\x1b[32m...`,
-  //       );
-  //       await this.connectedDevice.disconnectAsync();
-  //       await this.connectedDevice.removeAllListeners();
-  //       this.logger.warn(
-  //         `\x1b[34m${this.connectedDevice.advertisement.localName || this.connectedDevice.address} disconnected.`,
-  //       );
-  //     }
-
-  //     this.connectedDevice = null;
-  //   } catch (error) {
-  //     this.logger.error(`Error disconnecting from device: ${error.message}`);
-  //   }
-  // }
 
   private async startScanning() {
     try {
@@ -135,11 +116,19 @@ export class BluetoothService implements OnModuleInit {
           `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
         );
         this.connectedDevices.set(deviceId, peripheral);
-        // await this.startScanning();
-        // setTimeout(async () => {
-        //   await this.disconnectFromDevice();
-        //   await this.startScanning();
-        // }, 20000);
+
+        // Слухач на відключення та запуск скану нових повторно
+        peripheral.on('disconnect', async () => {
+          this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+          this.connectedDevices.delete(deviceId);
+          await this.startScanning();
+        });
+
+        // Зупинка сканування, якщо всі пристрої підключені
+        if (this.allDevicesConnected()) {
+          this.logger.log('All devices connected. Stopping scan...');
+          await noble.stopScanningAsync();
+        }
       } else {
         this.logger.warn('Device is not connected.');
       }
@@ -222,5 +211,10 @@ export class BluetoothService implements OnModuleInit {
       }
     }
     this.connectedDevices.clear();
+  }
+
+  private allDevicesConnected(): boolean {
+    const allowedDevices = config.allowedDevices;
+    return allowedDevices.every((deviceId) => this.connectedDevices.has(deviceId));
   }
 }
