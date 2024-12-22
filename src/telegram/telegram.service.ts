@@ -36,7 +36,7 @@ export class TelegramService implements OnModuleInit {
   @OnEvent('devices.connected', { async: true })
   async handleConnectedDevicesEvent(payload: { devices: number; }) {
     const message = `Connected devices: ${payload.devices}`;
-    await this.sendMessage(message);
+    await this.sendMessageSilent(message);
   }
 
   async sendMessage(text: string, channelId: string = this.channelId) {
@@ -45,6 +45,17 @@ export class TelegramService implements OnModuleInit {
       this.logger.log(`Message sent to channel ${channelId}: ${text}`);
     } catch (error) {
       this.logger.error(`Failed to send message to channel ${channelId}: ${error}`);
+    }
+  }
+
+  async sendMessageSilent(text: string, channelId: string = this.channelId) {
+    try {
+      await this.bot.api.sendMessage(channelId, text, {
+        disable_notification: true,
+      });
+      this.logger.log(`Silent message sent to channel ${channelId}: ${text}`);
+    } catch (error) {
+      this.logger.error(`Failed to send Silent message to channel ${channelId}: ${error}`);
     }
   }
 }
