@@ -12,6 +12,7 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
+    this.eventEmitter.emit('battery.low', { level: 99 });
 
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
