@@ -10,6 +10,7 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
+    noble.removeAllListeners();
 
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
@@ -68,8 +69,6 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async setupBluetooth() {
-    // this.logger.log(`Operating system: ${process.platform}`);
-
     noble.on('stateChange', async (state) => {
       this.logger.log(
         `The Bluetooth status has changed to: \x1b[31m${state}\x1b[32m.`,
