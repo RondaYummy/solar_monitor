@@ -23,7 +23,7 @@ export class BluetoothService implements OnModuleInit {
       ) {
         const deviceId = localName || manufacturerData || peripheral.address;
         if (this.connectedDevices.has(deviceId)) {
-          this.logger.log(`Device ${deviceId} is already connected.`);
+          this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m is already connected.`);
           return;
         }
 
@@ -174,10 +174,11 @@ export class BluetoothService implements OnModuleInit {
           // Якщо характеристика підтримує читання
           if (characteristic.properties.includes('read')) {
             const data = await characteristic.readAsync();
-            const buffer = Buffer.from('data', 'hex');
+            const utf8String = data.toString('utf8'); // Якщо дані є текстом
+            const hexString = data.toString('hex'); // Якщо потрібен формат HEX
 
             this.logger.log(
-              `Data from characteristic ${characteristic.uuid}: ${buffer.toString('utf8')}`,
+              `Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
             );
           }
 
