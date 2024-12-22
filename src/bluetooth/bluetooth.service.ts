@@ -62,7 +62,8 @@ export class BluetoothService implements OnModuleInit {
 
   private async startScanning() {
     try {
-      await noble.startScanningAsync(['180f'], true);
+      // Battery Service '180f'
+      await noble.startScanningAsync([], true);
       this.logger.log('Scanning has started...');
     } catch (error) {
       this.logger.error(`Scan startup error: ${error.message}`);
