@@ -117,7 +117,7 @@ export class BluetoothService implements OnModuleInit {
         this.connectedDevices.set(deviceId, peripheral);
 
         // Слухач на відключення та запуск скану нових повторно
-        peripheral.on('disconnect', async () => {
+        peripheral.once('disconnect', async () => {
           this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
           this.connectedDevices.delete(deviceId);
           await this.startScanning();
