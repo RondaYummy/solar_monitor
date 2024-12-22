@@ -174,9 +174,7 @@ export class BluetoothService implements OnModuleInit {
           // Якщо характеристика підтримує читання
           if (characteristic.properties.includes('read')) {
             const data = await characteristic.readAsync();
-            const buffer = Buffer.from('41540d0a', 'hex');
-            console.log(buffer.toString('utf8')); // Перетворення у текст
-
+            const buffer = Buffer.from('data', 'hex');
 
             this.logger.log(
               `Data from characteristic ${characteristic.uuid}: ${buffer.toString('utf8')}`,
@@ -187,8 +185,9 @@ export class BluetoothService implements OnModuleInit {
           if (characteristic.properties.includes('notify')) {
             await characteristic.subscribeAsync();
             characteristic.on('data', (data) => {
+              const buffer = Buffer.from('data', 'hex');
               this.logger.log(
-                `Notification from ${characteristic.uuid}: ${data.toString('hex')}`,
+                `Notification from ${characteristic.uuid}: ${buffer.toString('utf8')}`,
               );
             });
           }
