@@ -79,7 +79,7 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async setupBluetooth() {
-    this.logger.log(`Operating system: ${process.platform}`);
+    // this.logger.log(`Operating system: ${process.platform}`);
 
     noble.on('stateChange', async (state) => {
       this.logger.log(
