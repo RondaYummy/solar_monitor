@@ -23,7 +23,7 @@ export class BluetoothService implements OnModuleInit {
       ) {
         const deviceId = localName || manufacturerData || peripheral.address;
         if (this.connectedDevices.has(deviceId)) {
-          this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m is already connected.`);
+          this.logger.log(`Device \x1b[31m${deviceId}\x1b[31m is already connected.`);
           return;
         }
 
@@ -47,6 +47,14 @@ export class BluetoothService implements OnModuleInit {
 
     this.logger.log('Bluetooth initialization complete.');
     await this.setupBluetooth();
+
+    setInterval(() => {
+      const connectedDeviceNames = Array.from(this.connectedDevices.values())
+        .map((device) => device.advertisement.localName || device.address)
+        .join(', ');
+
+      this.logger.log(`Connected devices: ${connectedDeviceNames || 'None'}`);
+    }, 5000); // 5000 мс = 5 секунд
   }
 
   // private async disconnectFromDevice() {
