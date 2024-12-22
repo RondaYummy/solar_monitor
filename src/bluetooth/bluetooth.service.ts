@@ -115,7 +115,7 @@ export class BluetoothService implements OnModuleInit {
       setTimeout(async () => {
         await this.disconnectFromDevice();
         await this.startScanning();
-      }, 10000);
+      }, 20000);
     } else {
       this.logger.warn('Device is not connected.');
     }
