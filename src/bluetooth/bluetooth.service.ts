@@ -185,7 +185,7 @@ export class BluetoothService implements OnModuleInit {
           if (characteristic.properties.includes('notify')) {
             await characteristic.subscribeAsync();
             characteristic.on('data', (data) => {
-              const buffer = Buffer.from('data', 'hex');
+              const buffer = Buffer.from(data, 'hex');
               this.logger.log(
                 `Notification from ${characteristic.uuid}: ${buffer.toString('utf8')}`,
               );
