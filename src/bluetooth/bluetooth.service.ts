@@ -18,11 +18,6 @@ export class BluetoothService implements OnModuleInit {
     );
 
     noble.on('discover', async (peripheral) => {
-      console.log('Discovered Peripheral:');
-      console.log(`Address: ${peripheral.address}`);
-      console.log(`Advertisement Data: ${JSON.stringify(peripheral.advertisement, null, 2)}`);
-      console.log(`RSSI: ${peripheral.rssi}`);
-
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
@@ -128,6 +123,22 @@ export class BluetoothService implements OnModuleInit {
           await stopScanning(this.logger);
         }
       });
+
+
+      if (peripheral.address == 'c8:47:80:12:41:99') {
+        console.log('Discovered Peripheral:');
+        console.log(`Address: ${peripheral.address}`);
+        console.log(`Advertisement Data: ${JSON.stringify(peripheral.advertisement, null, 2)}`);
+        console.log(`RSSI: ${peripheral.rssi}`);
+
+        const manufacturerData = peripheral.advertisement.manufacturerData;
+        if (manufacturerData) {
+          console.log(`Manufacturer Data (HEX): ${manufacturerData.toString('hex')}`);
+          console.log(`Manufacturer Data (UTF-8): ${manufacturerData.toString('utf8')}`);
+        }
+        const serviceUuids = peripheral.advertisement.serviceUuids;
+        console.log(`Service UUIDs: ${serviceUuids.join(', ')}`);
+      }
 
 
       // Далі можна отримати сервіси та характеристики
