@@ -40,7 +40,6 @@ export class BluetoothService implements OnModuleInit {
         );
         try {
           await this.connectToDevice(peripheral);
-          await this.startScanning();
         } catch (error) {
           this.logger.error(`Error discover: ${error}`);
         }
@@ -138,6 +137,7 @@ export class BluetoothService implements OnModuleInit {
         // });
 
         // Зупинка сканування, якщо всі пристрої підключені
+        await this.startScanning();
         if (this.allDevicesConnected()) {
           this.logger.log('All devices connected. Stopping scan...');
           await noble.stopScanningAsync();
