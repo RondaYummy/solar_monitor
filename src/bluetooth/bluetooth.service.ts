@@ -8,17 +8,19 @@ export class BluetoothService implements OnModuleInit {
   private readonly logger = new Logger(BluetoothService.name);
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
 
-  constructor(private eventEmitter: EventEmitter2) { }
+  constructor(private eventEmitter: EventEmitter2) {}
 
   async onModuleInit() {
-    this.logger.log('Initializing Bluetooth... Current state: ' + noble?._state);
+    this.logger.log(
+      'Initializing Bluetooth... Current state: ' + noble?._state,
+    );
 
     noble.on('discover', async (peripheral) => {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
 
-      (peripheral as any).removeAllListeners();
+      // (peripheral as any).removeAllListeners();
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
       if (
@@ -27,7 +29,9 @@ export class BluetoothService implements OnModuleInit {
       ) {
         const deviceId = localName || manufacturerData || peripheral.address;
         if (this.connectedDevices.has(deviceId)) {
-          this.logger.log(`Device \x1b[31m${deviceId}\x1b[31m is already connected.`);
+          this.logger.log(
+            `Device \x1b[31m${deviceId}\x1b[31m is already connected.`,
+          );
           return;
         }
 
@@ -121,7 +125,9 @@ export class BluetoothService implements OnModuleInit {
         const connectedDeviceNames = Array.from(this.connectedDevices.values())
           .map((device) => device.advertisement.localName || device.address)
           .join(', ');
-        this.eventEmitter.emit('devices.connected', { devices: connectedDeviceNames });
+        this.eventEmitter.emit('devices.connected', {
+          devices: connectedDeviceNames,
+        });
 
         // Слухач на відключення та запуск скану нових повторно
         // peripheral.once('disconnect', async () => {
@@ -222,6 +228,8 @@ export class BluetoothService implements OnModuleInit {
 
   private allDevicesConnected(): boolean {
     const allowedDevices = config.allowedDevices;
-    return allowedDevices.every((deviceId) => this.connectedDevices.has(deviceId));
+    return allowedDevices.every((deviceId) =>
+      this.connectedDevices.has(deviceId),
+    );
   }
 }
