@@ -113,20 +113,19 @@ export class BluetoothService implements OnModuleInit {
       peripheral.address;
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
       this.logger.log(
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
-      peripheral.once('disconnect', async () => {
+      peripheral.on('disconnect', async () => {
         this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
         this.connectedDevices.delete(deviceId);
         await this.startScanning();
       });
 
-      peripheral.on('connect', () => {
+      peripheral.on('connect', async () => {
         this.connectedDevices.set(deviceId, peripheral);
         const connectedDeviceNames = Array.from(this.connectedDevices.values())
           .map((device) => device.advertisement.localName || device.address)
@@ -134,14 +133,14 @@ export class BluetoothService implements OnModuleInit {
         this.eventEmitter.emit('devices.connected', {
           devices: connectedDeviceNames,
         });
-        this.logger.log(`${this.rsColor}Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
-      });
+        this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
 
-      // Зупинка сканування, якщо всі пристрої підключені
-      if (this.allDevicesConnected()) {
-        this.logger.log('All devices connected. Stopping scan...');
-        await noble.stopScanningAsync();
-      }
+        // Зупинка сканування, якщо всі пристрої підключені
+        if (this.allDevicesConnected()) {
+          this.logger.log('All devices connected. Stopping scan...');
+          await noble.stopScanningAsync();
+        }
+      });
 
 
       // Далі можна отримати сервіси та характеристики
