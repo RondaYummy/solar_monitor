@@ -221,7 +221,7 @@ export class BluetoothService implements OnModuleInit {
     });
 
     if (devices.length) {
-      this.eventEmitter.emit('devices.connected', { devices });
+      // this.eventEmitter.emit('devices.connected', { devices });
       this.logger.log(`Connected devices: ${JSON.stringify(devices, null, 2)}`);
     }
   }
