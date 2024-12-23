@@ -206,13 +206,13 @@ export class BluetoothService implements OnModuleInit {
   private connectedDevicesInfo(): void {
     const devices = Array.from(this.connectedDevices.values()).map((device) => {
       const macAddress = device.address.toUpperCase();
-      const formattedMacAddress = macAddress.split(':').join('-'); // Заміна ":" на "-" для MAC адреси
       const localName = device.advertisement.localName || 'Unknown';
-
-      this.logger.log(`Device raw data: ${JSON.stringify(device.advertisement, null, 2)}`);
-      return { localName, address: formattedMacAddress };
+      return { localName, address: macAddress };
     });
-    this.eventEmitter.emit('devices.connected', { devices });
-    this.logger.log(`Connected devices: ${JSON.stringify(devices, null, 2)}`);
+
+    if (devices.length) {
+      this.eventEmitter.emit('devices.connected', { devices });
+      this.logger.log(`Connected devices: ${JSON.stringify(devices, null, 2)}`);
+    }
   }
 }
