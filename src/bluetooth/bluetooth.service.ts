@@ -97,7 +97,6 @@ export class BluetoothService implements OnModuleInit {
   private async connectToDevice(peripheral: noble.Peripheral) {
     const deviceId =
       peripheral.advertisement.localName ||
-      peripheral.advertisement.manufacturerData?.toString('hex') ||
       peripheral.address;
 
     try {
@@ -164,7 +163,7 @@ export class BluetoothService implements OnModuleInit {
             const hexString = data.toString('hex'); // Якщо потрібен формат HEX
 
             this.logger.log(
-              `Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
+              `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
             );
           }
 
