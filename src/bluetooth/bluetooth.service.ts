@@ -40,6 +40,7 @@ export class BluetoothService implements OnModuleInit {
         );
         try {
           await this.connectToDevice(peripheral);
+          await this.startScanning();
         } catch (error) {
           this.logger.error(`Error discover: ${error}`);
         }
