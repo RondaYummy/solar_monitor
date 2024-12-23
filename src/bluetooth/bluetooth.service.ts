@@ -18,6 +18,11 @@ export class BluetoothService implements OnModuleInit {
     );
 
     noble.on('discover', async (peripheral) => {
+      console.log('Discovered Peripheral:');
+      console.log(`Address: ${peripheral.address}`);
+      console.log(`Advertisement Data: ${JSON.stringify(peripheral.advertisement, null, 2)}`);
+      console.log(`RSSI: ${peripheral.rssi}`);
+
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
