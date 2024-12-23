@@ -1,5 +1,4 @@
 import * as noble from '@abandonware/noble';
-import { config } from 'configs/main.config';
 
 export function getColorForRSSI(rssi: number): string {
   if (rssi >= -60) {
@@ -11,43 +10,21 @@ export function getColorForRSSI(rssi: number): string {
   }
 }
 
-export async function startScanning() {
+export async function startScanning(logger) {
   try {
     // Battery Service '180f'
     await noble.startScanningAsync([], true);
-    this.logger.log('Scanning has started...');
+    logger.log('Scanning has started...');
   } catch (error) {
-    this.logger.error(`Scan startup error: ${error.message}`);
+    logger.error(`Scan startup error: ${error.message}`);
   }
 }
 
-export async function stopScanning() {
+export async function stopScanning(logger) {
   try {
     await noble.stopScanningAsync();
-    this.logger.log('Scanning stopped.');
+    logger.log('Scanning stopped.');
   } catch (error) {
-    this.logger.error(`Error stopping scan: ${error.message}`);
+    logger.error(`Error stopping scan: ${error.message}`);
   }
-}
-
-export async function disconnectAllDevices() {
-  this.logger.log('Disconnecting all devices...');
-  for (const [deviceId, peripheral] of this.connectedDevices.entries()) {
-    try {
-      if (peripheral.state === 'connected') {
-        await peripheral.disconnectAsync();
-        this.logger.log(`Disconnected device ${deviceId}.`);
-      }
-    } catch (error) {
-      this.logger.error(`Error disconnecting device ${deviceId}: ${error}`);
-    }
-  }
-  this.connectedDevices.clear();
-}
-
-export function allDevicesConnected(): boolean {
-  const allowedDevices = config.allowedDevices;
-  return allowedDevices.every((deviceId) =>
-    this.connectedDevices.has(deviceId),
-  );
 }

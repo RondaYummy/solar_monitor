@@ -69,7 +69,7 @@ export class BluetoothService implements OnModuleInit {
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
         try {
-          await startScanning();
+          await startScanning(this.logger);
         } catch (error) {
           this.logger.error(`[poweredOn] Scan startup error: ${error.message}`);
         }
@@ -81,7 +81,7 @@ export class BluetoothService implements OnModuleInit {
     if (noble?._state === 'poweredOn') {
       this.logger.log('Bluetooth is already on, start scanning...');
       try {
-        await startScanning();
+        await startScanning(this.logger);
       } catch (error) {
         this.logger.error(
           `[setupBluetooth] Scan startup error: ${error.message}`,
@@ -101,7 +101,7 @@ export class BluetoothService implements OnModuleInit {
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
 
-      await stopScanning();
+      await stopScanning(this.logger);
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
@@ -109,18 +109,18 @@ export class BluetoothService implements OnModuleInit {
         this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
-        await startScanning();
+        await startScanning(this.logger);
       });
 
       peripheral.on('connect', async () => {
-        await startScanning();
+        await startScanning(this.logger);
         this.connectedDevices.set(deviceId, peripheral);
         this.connectedDevicesInfo();
         this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
 
         if (this.allDevicesConnected()) {
           this.logger.log('All devices connected. Stopping scan...');
-          await stopScanning();
+          await stopScanning(this.logger);
         }
       });
 
