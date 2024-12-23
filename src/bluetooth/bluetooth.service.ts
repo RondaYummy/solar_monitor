@@ -9,7 +9,7 @@ export class BluetoothService implements OnModuleInit {
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
   private readonly rsColor = '\x1b[0m';
 
-  constructor(private eventEmitter: EventEmitter2) {}
+  constructor(private eventEmitter: EventEmitter2) { }
 
   async onModuleInit() {
     this.logger.log(
@@ -135,6 +135,10 @@ export class BluetoothService implements OnModuleInit {
           this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
           this.connectedDevices.delete(deviceId);
           await this.startScanning();
+        });
+
+        peripheral.on('connect', () => {
+          this.logger.log(`${this.rsColor}Device ${deviceId} connected successfully.`);
         });
 
         // Зупинка сканування, якщо всі пристрої підключені
