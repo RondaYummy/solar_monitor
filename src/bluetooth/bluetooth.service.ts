@@ -208,6 +208,8 @@ export class BluetoothService implements OnModuleInit {
       const macAddress = device.address.toUpperCase();
       const formattedMacAddress = macAddress.split(':').join('-'); // Заміна ":" на "-" для MAC адреси
       const localName = device.advertisement.localName || 'Unknown';
+
+      this.logger.log(`Device raw data: ${JSON.stringify(device.advertisement, null, 2)}`);
       return { localName, address: formattedMacAddress };
     });
     this.eventEmitter.emit('devices.connected', { devices });
