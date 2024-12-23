@@ -116,6 +116,8 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
+
+      await noble.stopScanningAsync();
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
@@ -126,6 +128,7 @@ export class BluetoothService implements OnModuleInit {
       });
 
       peripheral.on('connect', async () => {
+        await this.startScanning();
         this.connectedDevices.set(deviceId, peripheral);
         const connectedDeviceNames = Array.from(this.connectedDevices.values())
           .map((device) => device.advertisement.localName || device.address)
