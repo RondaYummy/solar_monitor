@@ -124,23 +124,6 @@ export class BluetoothService implements OnModuleInit {
         }
       });
 
-
-      if (peripheral.address == 'c8:47:80:12:41:99') {
-        console.log('Discovered Peripheral:');
-        console.log(`Address: ${peripheral.address}`);
-        console.log(`Advertisement Data: ${JSON.stringify(peripheral.advertisement, null, 2)}`);
-        console.log(`RSSI: ${peripheral.rssi}`);
-
-        const manufacturerData = peripheral.advertisement.manufacturerData;
-        if (manufacturerData) {
-          console.log(`Manufacturer Data (HEX): ${manufacturerData.toString('hex')}`);
-          console.log(`Manufacturer Data (UTF-8): ${manufacturerData.toString('utf8')}`);
-        }
-        const serviceUuids = peripheral.advertisement.serviceUuids;
-        console.log(`Service UUIDs: ${serviceUuids.join(', ')}`);
-      }
-
-
       // Далі можна отримати сервіси та характеристики
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const services = await peripheral.discoverServicesAsync([]);
