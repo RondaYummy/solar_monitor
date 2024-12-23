@@ -130,17 +130,17 @@ export class BluetoothService implements OnModuleInit {
       // Далі можна отримати сервіси та характеристики
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const services = await peripheral.discoverServicesAsync([]);
-      this.logger.log(`Discovered services: ${services.length}`);
+      this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
       for (const service of services) {
         const characteristics = await service.discoverCharacteristicsAsync([]);
         this.logger.log(
-          `Service: ${service.uuid}, Features: ${characteristics.length}`,
+          `\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`,
         );
 
         for (const characteristic of characteristics) {
           this.logger.log(
-            `Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`,
+            `\x1b[31m[${deviceId}]\x1b[32m Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`,
           );
           // const data = await characteristic.readAsync();
           // this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
@@ -149,7 +149,7 @@ export class BluetoothService implements OnModuleInit {
           if (service.uuid === '180f' && characteristic.uuid === '2a19') {
             if (characteristic.properties.includes('read')) {
               const data = await characteristic.readAsync();
-              this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
+              this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Raw Battery Data: ${data.toString('hex')}`);
               const batteryLevel = data.readUInt8(0);
               this.logger.log(`${this.rsColor}Battery Level: ${batteryLevel}%`);
               this.eventEmitter.emit('battery.low', { level: batteryLevel });
@@ -172,14 +172,14 @@ export class BluetoothService implements OnModuleInit {
             await characteristic.subscribeAsync();
             characteristic.on('data', (data) => {
               this.logger.log(
-                `Notification from ${characteristic.uuid}: ${data.toString('utf8')}`,
+                `\x1b[31m[${deviceId}]\x1b[32m Notification from ${characteristic.uuid}: ${data.toString('utf8')}`,
               );
             });
           }
         }
       }
     } catch (error) {
-      this.logger.error(`Error connecting to device ${deviceId}: ${error}`);
+      this.logger.error(`\x1b[31m[${deviceId}]\x1b[32m Error connecting to device ${deviceId}: ${error}`);
       if (peripheral.state === 'connected') {
         await peripheral.disconnectAsync();
       }
