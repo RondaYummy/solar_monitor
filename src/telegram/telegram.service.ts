@@ -41,7 +41,9 @@ export class TelegramService implements OnModuleInit {
 
   async sendMessage(text: string, channelId: string = this.channelId) {
     try {
-      await this.bot.api.sendMessage(channelId, text);
+      await this.bot.api.sendMessage(channelId, text.{
+        parse_mode: 'HTML',
+      });
       this.logger.log(`Message sent to channel ${channelId}: ${text}`);
     } catch (error) {
       this.logger.error(`Failed to send message to channel ${channelId}: ${error}`);
@@ -52,6 +54,7 @@ export class TelegramService implements OnModuleInit {
     try {
       await this.bot.api.sendMessage(channelId, text, {
         disable_notification: true,
+        parse_mode: 'HTML',
       });
       this.logger.log(`Silent message sent to channel ${channelId}: ${text}`);
     } catch (error) {

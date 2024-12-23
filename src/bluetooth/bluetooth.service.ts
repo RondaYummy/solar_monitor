@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as noble from '@abandonware/noble';
 import { config } from 'configs/main.config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { getColorForRSSI, startScanning, stopScanning } from 'src/utils/bluetooth.utils';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
@@ -20,22 +21,20 @@ export class BluetoothService implements OnModuleInit {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
-      // (peripheral as any).removeAllListeners();
 
-      // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
       if (
         config.allowedDevices.includes(manufacturerData) ||
         config.allowedDevices.includes(localName)
       ) {
         const deviceId = localName || manufacturerData || peripheral.address;
-        if (this.connectedDevices.has(deviceId)) {
+        if (this.connectedDevices.has(deviceId) && peripheral.state === 'connected') {
           this.logger.log(
             `Device \x1b[31m${deviceId}\x1b[31m is already connected.`,
           );
           return;
         }
 
-        const rssiColor = this.getColorForRSSI(peripheral.rssi);
+        const rssiColor = getColorForRSSI(peripheral.rssi);
         this.logger.log(
           `Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}${this.rsColor}`,
         );
@@ -59,24 +58,6 @@ export class BluetoothService implements OnModuleInit {
 
     this.logger.log('Bluetooth initialization complete.');
     await this.setupBluetooth();
-
-    setInterval(() => {
-      const connectedDeviceNames = Array.from(this.connectedDevices.values())
-        .map((device) => device.advertisement.localName || device.address)
-        .join(', ');
-
-      this.logger.log(`Connected devices: ${connectedDeviceNames || 'None'}`);
-    }, 20000); // 20 секунд
-  }
-
-  private async startScanning() {
-    try {
-      // Battery Service '180f'
-      await noble.startScanningAsync([], true);
-      this.logger.log('Scanning has started...');
-    } catch (error) {
-      this.logger.error(`Scan startup error: ${error.message}`);
-    }
   }
 
   private async setupBluetooth() {
@@ -88,7 +69,7 @@ export class BluetoothService implements OnModuleInit {
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
         try {
-          await this.startScanning();
+          await startScanning();
         } catch (error) {
           this.logger.error(`[poweredOn] Scan startup error: ${error.message}`);
         }
@@ -100,7 +81,7 @@ export class BluetoothService implements OnModuleInit {
     if (noble?._state === 'poweredOn') {
       this.logger.log('Bluetooth is already on, start scanning...');
       try {
-        await this.startScanning();
+        await startScanning();
       } catch (error) {
         this.logger.error(
           `[setupBluetooth] Scan startup error: ${error.message}`,
@@ -120,31 +101,26 @@ export class BluetoothService implements OnModuleInit {
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
 
-      await noble.stopScanningAsync();
+      await stopScanning();
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
       peripheral.once('disconnect', async () => {
         this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
         this.connectedDevices.delete(deviceId);
-        await this.startScanning();
+        this.connectedDevicesInfo();
+        await startScanning();
       });
 
       peripheral.on('connect', async () => {
-        await this.startScanning();
+        await startScanning();
         this.connectedDevices.set(deviceId, peripheral);
-        const connectedDeviceNames = Array.from(this.connectedDevices.values())
-          .map((device) => device.advertisement.localName || device.address)
-          .join(', ');
-        this.eventEmitter.emit('devices.connected', {
-          devices: connectedDeviceNames,
-        });
+        this.connectedDevicesInfo();
         this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
 
-        // Зупинка сканування, якщо всі пристрої підключені
         if (this.allDevicesConnected()) {
           this.logger.log('All devices connected. Stopping scan...');
-          await noble.stopScanningAsync();
+          await stopScanning();
         }
       });
 
@@ -240,13 +216,12 @@ export class BluetoothService implements OnModuleInit {
     );
   }
 
-  private getColorForRSSI(rssi: number): string {
-    if (rssi >= -60) {
-      return '\x1b[34m'; // Синій для сильного сигналу
-    } else if (rssi >= -80) {
-      return '\x1b[33m'; // Жовтий для середнього сигналу
-    } else {
-      return '\x1b[31m'; // Червоний для слабкого сигналу
-    }
+  private connectedDevicesInfo(): void {
+    const connectedDeviceNames = Array.from(this.connectedDevices.values())
+      .map((device) => device.advertisement.localName || device.address)
+      .join(', ');
+    this.eventEmitter.emit('devices.connected', {
+      devices: connectedDeviceNames,
+    });
   }
 }

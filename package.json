@@ -1,8 +1,8 @@
 {
   "name": "solar_monitor",
-  "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "version": "1.0.0",
+  "description": "BMS Monitor",
+  "author": "RondoYummy <basrers@ukr.net>",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
