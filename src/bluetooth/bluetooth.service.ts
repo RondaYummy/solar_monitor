@@ -204,11 +204,13 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private connectedDevicesInfo(): void {
-    const connectedDeviceNames = Array.from(this.connectedDevices.values())
-      .map((device) => device.advertisement.localName || device.address)
-      .join(', ');
-    this.eventEmitter.emit('devices.connected', {
-      devices: connectedDeviceNames,
+    const devices = Array.from(this.connectedDevices.values()).map((device) => {
+      const macAddress = device.address.toUpperCase();
+      const formattedMacAddress = macAddress.split(':').join('-'); // Заміна ":" на "-" для MAC адреси
+      const localName = device.advertisement.localName || 'Unknown';
+      return { localName, address: formattedMacAddress };
     });
+    this.eventEmitter.emit('devices.connected', { devices });
+    this.logger.log(`Connected devices: ${JSON.stringify(devices, null, 2)}`);
   }
 }

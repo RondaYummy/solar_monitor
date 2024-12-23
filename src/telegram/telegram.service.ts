@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Api, Bot, Context, RawApi } from 'grammy';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
+import { prepareMessage } from 'src/utils/telegram.utils';
 
 @Injectable()
 export class TelegramService implements OnModuleInit {
@@ -19,7 +20,7 @@ export class TelegramService implements OnModuleInit {
   constructor(private configService: ConfigService) {
     try {
       this.bot = new Bot<Context>(this.configService.get<string>('TELEGRAM_BOT_TOKEN'));
-      this.channelId = this.configService.get<string>('TELEGRAM_CHANNEL_ID');
+      this.channelId = `-100${this.configService.get<string>('TELEGRAM_CHANNEL_ID')}`;
     } catch (error) {
       console.error(error);
       this.logger.error(error);
@@ -34,9 +35,8 @@ export class TelegramService implements OnModuleInit {
   }
 
   @OnEvent('devices.connected', { async: true })
-  async handleConnectedDevicesEvent(payload: { devices: number; }) {
-    const message = `Connected devices: ${payload.devices}`;
-    await this.sendMessageSilent(message);
+  async handleConnectedDevicesEvent(payload: { devices: Array<{ localName: string; address: string; }>; }) {
+    await this.sendMessageSilent(prepareMessage(payload));
   }
 
   async sendMessage(text: string, channelId: string = this.channelId) {
