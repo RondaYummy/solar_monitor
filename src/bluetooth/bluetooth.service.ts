@@ -13,51 +13,55 @@ export class BluetoothService implements OnModuleInit {
   constructor(private eventEmitter: EventEmitter2) { }
 
   async onModuleInit() {
-    this.logger.log(
-      'Initializing Bluetooth... Current state: ' + noble?._state,
-    );
+    try {
+      this.logger.log(
+        'Initializing Bluetooth... Current state: ' + noble?._state,
+      );
 
-    noble.on('discover', async (peripheral) => {
-      const manufacturerData =
-        peripheral.advertisement.manufacturerData?.toString('hex');
-      const localName = peripheral.advertisement.localName;
+      noble.on('discover', async (peripheral) => {
+        const manufacturerData =
+          peripheral.advertisement.manufacturerData?.toString('hex');
+        const localName = peripheral.advertisement.localName;
 
-      if (
-        config.allowedDevices.includes(manufacturerData) ||
-        config.allowedDevices.includes(localName)
-      ) {
-        const deviceId = localName || manufacturerData || peripheral.address;
-        if (this.connectedDevices.has(deviceId) && peripheral.state === 'connected') {
+        if (
+          config.allowedDevices.includes(manufacturerData) ||
+          config.allowedDevices.includes(localName)
+        ) {
+          const deviceId = localName || manufacturerData || peripheral.address;
+          if (this.connectedDevices.has(deviceId) && peripheral.state === 'connected') {
+            this.logger.log(
+              `Device \x1b[31m${deviceId}\x1b[31m is already connected.`,
+            );
+            return;
+          }
+
+          const rssiColor = getColorForRSSI(peripheral.rssi);
           this.logger.log(
-            `Device \x1b[31m${deviceId}\x1b[31m is already connected.`,
+            `Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}${this.rsColor}`,
           );
-          return;
+          try {
+            await this.connectToDevice(peripheral);
+          } catch (error) {
+            this.logger.error(`Error discover: ${error}`);
+          }
         }
+      });
 
-        const rssiColor = getColorForRSSI(peripheral.rssi);
-        this.logger.log(
-          `Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}${this.rsColor}`,
-        );
-        try {
-          await this.connectToDevice(peripheral);
-        } catch (error) {
-          this.logger.error(`Error discover: ${error}`);
-        }
-      }
-    });
+      noble.on('warning', (message) => {
+        this.logger.warn(`Warning: ${message}`);
+      });
+      noble.on('uncaughtException', (error) => {
+        this.logger.error(`Uncaught exception: ${error}`);
+      });
+      noble.on('error', (error) => {
+        this.logger.error(`\x1b[31mPeripheral error: ${error.message}`);
+      });
 
-    noble.on('warning', (message) => {
-      this.logger.warn(`Warning: ${message}`);
-    });
-    noble.on('uncaughtException', (error) => {
-      this.logger.error(`Uncaught exception: ${error}`);
-    });
-    noble.on('error', (error) => {
-      this.logger.error(`\x1b[31mPeripheral error: ${error.message}`);
-    });
-
-    this.logger.log('Bluetooth initialization complete.');
-    await this.setupBluetooth();
+      this.logger.log('Bluetooth initialization complete.');
+      await this.setupBluetooth();
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 
   private async setupBluetooth() {
