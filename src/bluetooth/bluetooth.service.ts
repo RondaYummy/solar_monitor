@@ -153,6 +153,10 @@ export class BluetoothService implements OnModuleInit {
             }
           }
 
+          characteristic.on('data', (data) => {
+            console.log('Received data:', data.toString('hex'));
+          });
+
           // Якщо характеристика підтримує читання
           if (characteristic.properties.includes('read')) {
             const data = await characteristic.readAsync();
