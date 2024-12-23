@@ -118,10 +118,15 @@ export class BluetoothService implements OnModuleInit {
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
       await peripheral.connectAsync();
-      if (peripheral?.state === 'connected') {
-        this.logger.log(
-          `\x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m connected!`,
-        );
+
+      // Слухач на відключення та запуск скану нових повторно
+      peripheral.once('disconnect', async () => {
+        this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+        this.connectedDevices.delete(deviceId);
+        await this.startScanning();
+      });
+
+      peripheral.on('connect', () => {
         this.connectedDevices.set(deviceId, peripheral);
         const connectedDeviceNames = Array.from(this.connectedDevices.values())
           .map((device) => device.advertisement.localName || device.address)
@@ -129,26 +134,15 @@ export class BluetoothService implements OnModuleInit {
         this.eventEmitter.emit('devices.connected', {
           devices: connectedDeviceNames,
         });
+        this.logger.log(`${this.rsColor}Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
+      });
 
-        // Слухач на відключення та запуск скану нових повторно
-        peripheral.once('disconnect', async () => {
-          this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
-          this.connectedDevices.delete(deviceId);
-          await this.startScanning();
-        });
-
-        peripheral.on('connect', () => {
-          this.logger.log(`${this.rsColor}Device ${deviceId} connected successfully.`);
-        });
-
-        // Зупинка сканування, якщо всі пристрої підключені
-        if (this.allDevicesConnected()) {
-          this.logger.log('All devices connected. Stopping scan...');
-          await noble.stopScanningAsync();
-        }
-      } else {
-        this.logger.warn('Device is not connected.');
+      // Зупинка сканування, якщо всі пристрої підключені
+      if (this.allDevicesConnected()) {
+        this.logger.log('All devices connected. Stopping scan...');
+        await noble.stopScanningAsync();
       }
+
 
       // Далі можна отримати сервіси та характеристики
       const services = await peripheral.discoverServicesAsync([]);
