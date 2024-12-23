@@ -60,7 +60,7 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log('Bluetooth initialization complete.');
       await this.setupBluetooth();
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(`onModuleInit: ${error}`);
     }
   }
 
