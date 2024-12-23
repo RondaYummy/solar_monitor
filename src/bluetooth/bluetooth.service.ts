@@ -19,7 +19,12 @@ export class BluetoothService implements OnModuleInit {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
-
+      console.log('Discovered peripheral:', {
+        id: peripheral.id,
+        address: peripheral.address,
+        advertisement: peripheral.advertisement,
+        rssi: peripheral.rssi,
+      });
       // (peripheral as any).removeAllListeners();
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
@@ -130,11 +135,11 @@ export class BluetoothService implements OnModuleInit {
         });
 
         // Слухач на відключення та запуск скану нових повторно
-        // peripheral.once('disconnect', async () => {
-        //   this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
-        //   this.connectedDevices.delete(deviceId);
-        //   await this.startScanning();
-        // });
+        peripheral.once('disconnect', async () => {
+          this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+          this.connectedDevices.delete(deviceId);
+          await this.startScanning();
+        });
 
         // Зупинка сканування, якщо всі пристрої підключені
         if (this.allDevicesConnected()) {
