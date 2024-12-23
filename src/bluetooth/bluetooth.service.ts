@@ -68,7 +68,7 @@ export class BluetoothService implements OnModuleInit {
   private async startScanning() {
     try {
       // Battery Service '180f'
-      await noble.startScanningAsync([], true);
+      await noble.startScanningAsync([], false);
       this.logger.log('Scanning has started...');
     } catch (error) {
       this.logger.error(`Scan startup error: ${error.message}`);
@@ -137,11 +137,10 @@ export class BluetoothService implements OnModuleInit {
         // });
 
         // Зупинка сканування, якщо всі пристрої підключені
-        console.log(this.allDevicesConnected(), 'this.allDevicesConnected()');
-        // if (this.allDevicesConnected()) {
-        //   this.logger.log('All devices connected. Stopping scan...');
-        //   await noble.stopScanningAsync();
-        // }
+        if (this.allDevicesConnected()) {
+          this.logger.log('All devices connected. Stopping scan...');
+          await noble.stopScanningAsync();
+        }
       } else {
         this.logger.warn('Device is not connected.');
       }
@@ -149,6 +148,7 @@ export class BluetoothService implements OnModuleInit {
       // Далі можна отримати сервіси та характеристики
       const services = await peripheral.discoverServicesAsync([]);
       console.log(services, 'services');
+
       for (const service of services) {
         const characteristics = await service.discoverCharacteristicsAsync([]);
         this.logger.log(
