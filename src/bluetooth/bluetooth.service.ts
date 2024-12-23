@@ -53,6 +53,9 @@ export class BluetoothService implements OnModuleInit {
     noble.on('uncaughtException', (error) => {
       this.logger.error(`Uncaught exception: ${error}`);
     });
+    noble.on('error', (error) => {
+      this.logger.error(`\x1b[31mPeripheral error: ${error.message}`);
+    });
 
     this.logger.log('Bluetooth initialization complete.');
     await this.setupBluetooth();
@@ -121,7 +124,7 @@ export class BluetoothService implements OnModuleInit {
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
-      peripheral.on('disconnect', async () => {
+      peripheral.once('disconnect', async () => {
         this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
         this.connectedDevices.delete(deviceId);
         await this.startScanning();
