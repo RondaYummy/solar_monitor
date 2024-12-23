@@ -137,11 +137,11 @@ export class BluetoothService implements OnModuleInit {
         // });
 
         // Зупинка сканування, якщо всі пристрої підключені
-        await this.startScanning();
-        if (this.allDevicesConnected()) {
-          this.logger.log('All devices connected. Stopping scan...');
-          await noble.stopScanningAsync();
-        }
+        console.log(this.allDevicesConnected(), 'this.allDevicesConnected()');
+        // if (this.allDevicesConnected()) {
+        //   this.logger.log('All devices connected. Stopping scan...');
+        //   await noble.stopScanningAsync();
+        // }
       } else {
         this.logger.warn('Device is not connected.');
       }
