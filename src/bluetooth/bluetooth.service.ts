@@ -7,6 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 export class BluetoothService implements OnModuleInit {
   private readonly logger = new Logger(BluetoothService.name);
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
+  private readonly rsColor = '\x1b[0m';
 
   constructor(private eventEmitter: EventEmitter2) {}
 
@@ -19,12 +20,6 @@ export class BluetoothService implements OnModuleInit {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
       const localName = peripheral.advertisement.localName;
-      console.log('Discovered peripheral:', {
-        id: peripheral.id,
-        address: peripheral.address,
-        advertisement: peripheral.advertisement,
-        rssi: peripheral.rssi,
-      });
       // (peripheral as any).removeAllListeners();
 
       // Якщо це потрібний вам пристрій (перевіряємо за виробником або назвою)
@@ -40,8 +35,9 @@ export class BluetoothService implements OnModuleInit {
           return;
         }
 
+        const rssiColor = this.getColorForRSSI(peripheral.rssi);
         this.logger.log(
-          `[${manufacturerData}] Discovered device: \x1b[31m${deviceId}`,
+          `Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}${this.rsColor}`,
         );
         try {
           await this.connectToDevice(peripheral);
@@ -172,7 +168,9 @@ export class BluetoothService implements OnModuleInit {
                 `ФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФ: ${data.toString('hex')}`,
               );
               const batteryLevel = data.readUInt8(0);
-              this.logger.log(`\x1b[0mФФФФФФФФФФФФФФФФФФФ: ${batteryLevel}%`);
+              this.logger.log(
+                `${this.rsColor}ФФФФФФФФФФФФФФФФФФФ: ${batteryLevel}%`,
+              );
             }
           }
 
@@ -182,7 +180,7 @@ export class BluetoothService implements OnModuleInit {
               const data = await characteristic.readAsync();
               this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
               const batteryLevel = data.readUInt8(0);
-              this.logger.log(`\x1b[0mBattery Level: ${batteryLevel}%`);
+              this.logger.log(`${this.rsColor}Battery Level: ${batteryLevel}%`);
               this.eventEmitter.emit('battery.low', { level: batteryLevel });
             }
           }
@@ -237,5 +235,15 @@ export class BluetoothService implements OnModuleInit {
     return allowedDevices.every((deviceId) =>
       this.connectedDevices.has(deviceId),
     );
+  }
+
+  private getColorForRSSI(rssi: number): string {
+    if (rssi >= -60) {
+      return '\x1b[32m'; // Зелений для сильного сигналу
+    } else if (rssi >= -80) {
+      return '\x1b[33m'; // Жовтий для середнього сигналу
+    } else {
+      return '\x1b[31m'; // Червоний для слабкого сигналу
+    }
   }
 }
