@@ -41,7 +41,7 @@ export class TelegramService implements OnModuleInit {
 
   async sendMessage(text: string, channelId: string = this.channelId) {
     try {
-      await this.bot.api.sendMessage(channelId, text.{
+      await this.bot.api.sendMessage(channelId, text, {
         parse_mode: 'HTML',
       });
       this.logger.log(`Message sent to channel ${channelId}: ${text}`);
