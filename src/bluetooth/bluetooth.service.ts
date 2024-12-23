@@ -127,7 +127,7 @@ export class BluetoothService implements OnModuleInit {
 
       // Далі можна отримати сервіси та характеристики
       const services = await peripheral.discoverServicesAsync([]);
-      console.log(services, 'services');
+      this.logger.log(`Discovered services: ${services.length}`);
 
       for (const service of services) {
         const characteristics = await service.discoverCharacteristicsAsync([]);
@@ -139,19 +139,6 @@ export class BluetoothService implements OnModuleInit {
           this.logger.log(
             `Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`,
           );
-
-          if (characteristic.uuid === 'f000ffc0-0451-4000-b000-000000000000') {
-            if (characteristic.properties.includes('read')) {
-              const data = await characteristic.readAsync();
-              this.logger.log(
-                `ФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФ: ${data.toString('hex')}`,
-              );
-              const batteryLevel = data.readUInt8(0);
-              this.logger.log(
-                `${this.rsColor}ФФФФФФФФФФФФФФФФФФФ: ${batteryLevel}%`,
-              );
-            }
-          }
 
           // Читання рівня заряду батареї
           if (service.uuid === '180f' && characteristic.uuid === '2a19') {
