@@ -10,10 +10,10 @@ export function getColorForRSSI(rssi: number): string {
   }
 }
 
-export async function startScanning(logger) {
+export async function startScanning(logger, SERVICE_UUID) {
   try {
     // Battery Service '180f'
-    await noble.startScanningAsync([], true);
+    await noble.startScanningAsync([SERVICE_UUID], true);
     logger.log('Scanning has started...');
   } catch (error) {
     logger.error(`Scan startup error: ${error.message}`);
