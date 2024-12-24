@@ -29,7 +29,7 @@ export class BluetoothService implements OnModuleInit {
             peripheral.advertisement.manufacturerData?.toString('hex');
           const localName = peripheral.advertisement.localName;
           const rssiColor = getColorForRSSI(peripheral.rssi);
-          const deviceId = localName || manufacturerData || peripheral.address;
+          const deviceId = localName || peripheral.address || manufacturerData;
           this.logger.log(`Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
 
           if (
