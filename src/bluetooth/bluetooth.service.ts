@@ -26,7 +26,6 @@ export class BluetoothService implements OnModuleInit {
     try {
       this.logger.log('Initializing Bluetooth...');
       noble.removeAllListeners();
-      noble.setMaxListeners(20);
 
       noble.on('discover', async (peripheral) => {
         try {
