@@ -1,5 +1,10 @@
+interface AllowedDevice {
+  localName: string;
+  address: string;
+}
+
 interface Config {
-  allowedDevices: Array<{ localName: string; address: string; }>;
+  allowedDevices: Array<AllowedDevice>;
 }
 
 export const config: Config = {
