@@ -17,7 +17,7 @@ export class BluetoothService implements OnModuleInit {
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
   private readonly rsColor = '\x1b[0m';
 
-  constructor(private eventEmitter: EventEmitter2) {}
+  constructor(private eventEmitter: EventEmitter2) { }
 
   async onModuleInit() {
     try {
@@ -117,12 +117,14 @@ export class BluetoothService implements OnModuleInit {
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
-      peripheral.once('disconnect', async () => {
-        this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
-        this.connectedDevices.delete(deviceId);
-        this.connectedDevicesInfo();
-        await startScanning(this.logger, SERVICE_UUID);
-      });
+      if (!this.connectedDevices.has(deviceId)) {
+        peripheral.once('disconnect', async () => {
+          this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+          this.connectedDevices.delete(deviceId);
+          this.connectedDevicesInfo();
+          await startScanning(this.logger, SERVICE_UUID);
+        });
+      }
 
       peripheral.on('connect', async () => {
         await startScanning(this.logger, SERVICE_UUID);
@@ -274,30 +276,22 @@ function decodeCellInfo(data: Buffer) {
 }
 
 async function discoverServicesAndCharacteristics(device: noble.Peripheral) {
-  device.discoverSomeServicesAndCharacteristics(
-    [SERVICE_UUID],
-    [CHARACTERISTIC_UUID],
-    (err, services, characteristics) => {
-      if (err) {
-        console.error('Service discovery error:', err);
-        return;
+  try {
+    const services = await device.discoverServicesAsync([SERVICE_UUID]);
+    for (const service of services) {
+      const characteristics = await service.discoverCharacteristicsAsync([CHARACTERISTIC_UUID]);
+      for (const characteristic of characteristics) {
+        if (characteristic.properties.includes('notify')) {
+          this.logger.log(`Subscribing to notifications for characteristic ${characteristic.uuid}`);
+          await characteristic.subscribeAsync();
+          characteristic.on('data', (data) => {
+            parseData(data);
+          });
+        }
       }
-
-      const characteristic = characteristics[0];
-      if (characteristic) {
-        console.log('Subscribing to notifications...');
-        characteristic.on('data', (data, isNotification) => {
-          parseData(data);
-        });
-
-        characteristic.subscribe((error) => {
-          if (error) {
-            console.error('Subscription error:', error);
-          } else {
-            console.log('Subscribed to notifications');
-          }
-        });
-      }
-    },
-  );
+    }
+  } catch (error) {
+    this.logger.error(`Error in service/characteristic discovery: ${error.message}`);
+  }
 }
+
