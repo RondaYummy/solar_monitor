@@ -113,7 +113,7 @@ export class BluetoothService implements OnModuleInit {
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
 
-      // await stopScanning(this.logger);
+      await stopScanning(this.logger); // TODO
       await peripheral.connectAsync();
 
       // Слухач на відключення та запуск скану нових повторно
