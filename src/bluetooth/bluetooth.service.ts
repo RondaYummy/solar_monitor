@@ -113,17 +113,21 @@ export class BluetoothService implements OnModuleInit {
         `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
       );
 
-      await stopScanning(this.logger); // TODO
       await peripheral.connectAsync();
+      this.logger.log(`[connectToDevice] Connected to ${deviceId}`);
+      await stopScanning(this.logger); // TODO
+      this.logger.log(`[connectToDevice] Stopped scanning for ${deviceId}`);
 
       // Слухач на відключення та запуск скану нових повторно
       if (!this.connectedDevices.has(deviceId)) {
-        peripheral.once('disconnect', async () => {
-          this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
-          this.connectedDevices.delete(deviceId);
-          this.connectedDevicesInfo();
-          // await startScanning(this.logger, SERVICE_UUID);
-        });
+        if (this.connectedDevices.has(deviceId)) {
+          peripheral.once('disconnect', async () => {
+            this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+            this.connectedDevices.delete(deviceId);
+            this.connectedDevicesInfo();
+            // await startScanning(this.logger, SERVICE_UUID);
+          });
+        }
       }
 
       peripheral.on('connect', async () => {
