@@ -21,40 +21,34 @@ export class BluetoothService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      this.logger.log(
-        'Initializing Bluetooth... Current state: ' + noble?._state,
-      );
+      this.logger.log('Initializing Bluetooth...');
 
       noble.on('discover', async (peripheral) => {
-        const manufacturerData =
-          peripheral.advertisement.manufacturerData?.toString('hex');
-        const localName = peripheral.advertisement.localName;
-
-        if (
-          config.allowedDevices.includes(manufacturerData) ||
-          config.allowedDevices.includes(localName)
-        ) {
-          const deviceId = localName || manufacturerData || peripheral.address;
-          if (
-            this.connectedDevices.has(deviceId) &&
-            peripheral.state === 'connected'
-          ) {
-            this.logger.log(
-              `Device \x1b[31m${deviceId}\x1b[31m is already connected.`,
-            );
-            return;
-          }
-
+        try {
+          const manufacturerData =
+            peripheral.advertisement.manufacturerData?.toString('hex');
+          const localName = peripheral.advertisement.localName;
           const rssiColor = getColorForRSSI(peripheral.rssi);
-          this.logger.log(
-            `Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}${this.rsColor}`,
-          );
-          try {
+          const deviceId = localName || manufacturerData || peripheral.address;
+          this.logger.log(`Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
+
+          if (
+            config.allowedDevices.includes(manufacturerData) ||
+            config.allowedDevices.includes(localName)
+          ) {
+            if (
+              this.connectedDevices.has(deviceId) &&
+              peripheral.state === 'connected'
+            ) {
+              this.logger.log(`Device \x1b[31m${deviceId}\x1b[31m is already connected.`);
+              return;
+            }
+
             await this.connectToDevice(peripheral);
             await discoverServicesAndCharacteristics(peripheral);
-          } catch (error) {
-            this.logger.error(`Error discover: ${error}`);
           }
+        } catch (error) {
+          this.logger.error(`\x1b[31mError discover: ${error}`);
         }
       });
 
@@ -62,7 +56,7 @@ export class BluetoothService implements OnModuleInit {
         this.logger.warn(`Warning: ${message}`);
       });
       noble.on('uncaughtException', (error) => {
-        this.logger.error(`Uncaught exception: ${error}`);
+        this.logger.error(`\x1b[31mUncaught exception: ${error}`);
       });
       noble.on('error', (error) => {
         this.logger.error(`\x1b[31mPeripheral error: ${error.message}`);
@@ -71,72 +65,52 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log('Bluetooth initialization complete.');
       await this.setupBluetooth();
     } catch (error) {
-      this.logger.error(`onModuleInit: ${error}`);
+      this.logger.error(`\x1b[31monModuleInit: ${error}`);
     }
   }
 
   private async setupBluetooth() {
     noble.on('stateChange', async (state) => {
-      this.logger.log(
-        `The Bluetooth status has changed to: \x1b[31m${state}\x1b[32m.`,
-      );
+      this.logger.log(`The Bluetooth status has changed to: \x1b[31m${state}\x1b[32m.`);
 
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
         try {
           await startScanning(this.logger, SERVICE_UUID);
         } catch (error) {
-          this.logger.error(`[poweredOn] Scan startup error: ${error.message}`);
+          this.logger.error(`\x1b[31m[setupBluetooth] Scan startup error: ${error.message}`);
         }
       } else {
         this.logger.warn(`Bluetooth is not ready: ${state}`);
       }
     });
-
-    if (noble?._state === 'poweredOn') {
-      this.logger.log('Bluetooth is already on, start scanning...');
-      try {
-        await startScanning(this.logger, SERVICE_UUID);
-      } catch (error) {
-        this.logger.error(
-          `[setupBluetooth] Scan startup error: ${error.message}`,
-        );
-      }
-    }
   }
 
   private async connectToDevice(peripheral: noble.Peripheral) {
-    const deviceId = peripheral.advertisement.localName || peripheral.address;
+    const deviceId = peripheral.advertisement.localName || peripheral.address || peripheral.advertisement.manufacturerData?.toString('hex');
+    this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
 
     try {
-      this.logger.log(
-        `Connection to \x1b[31m${peripheral.advertisement.localName || peripheral.address}\x1b[32m...`,
-      );
-
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to ${deviceId}`);
-      await stopScanning(this.logger); // TODO
-      this.logger.log(`[connectToDevice] Stopped scanning for ${deviceId}`);
+      // await stopScanning(this.logger); // TODO
+      // this.logger.log(`[connectToDevice] Stopped scanning for ${deviceId}`);
 
       // Слухач на відключення та запуск скану нових повторно
-      if (!this.connectedDevices.has(deviceId)) {
-        if (this.connectedDevices.has(deviceId)) {
-          peripheral.once('disconnect', async () => {
-            this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
-            this.connectedDevices.delete(deviceId);
-            this.connectedDevicesInfo();
-            // await startScanning(this.logger, SERVICE_UUID);
-          });
-        }
+      if (this.connectedDevices.has(deviceId)) {
+        peripheral.once('disconnect', async () => {
+          this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+          this.connectedDevices.delete(deviceId);
+          this.connectedDevicesInfo();
+          await startScanning(this.logger, SERVICE_UUID);
+        });
       }
 
       peripheral.on('connect', async () => {
-        // await startScanning(this.logger, SERVICE_UUID);
+        await startScanning(this.logger, SERVICE_UUID);
         this.connectedDevices.set(deviceId, peripheral);
         this.connectedDevicesInfo();
-        this.logger.log(
-          `Device \x1b[31m${deviceId}\x1b[32m connected successfully.`,
-        );
+        this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
 
         if (this.allDevicesConnected()) {
           this.logger.log('All devices connected. Stopping scan...');
@@ -147,30 +121,22 @@ export class BluetoothService implements OnModuleInit {
       // Далі можна отримати сервіси та характеристики
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const services = await peripheral.discoverServicesAsync([]);
-      this.logger.log(
-        `\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`,
-      );
+      this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
       for (const service of services) {
         const characteristics = await service.discoverCharacteristicsAsync([]);
-        this.logger.log(
-          `\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`,
-        );
+        this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
 
         for (const characteristic of characteristics) {
-          this.logger.log(
-            `\x1b[31m[${deviceId}]\x1b[32m Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`,
-          );
+          this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`);
           // const data = await characteristic.readAsync();
           // this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
 
-          // Читання рівня заряду батареї
+          // Читання рівня заряду батареї ( не працююче? )
           if (service.uuid === '180f' && characteristic.uuid === '2a19') {
             if (characteristic.properties.includes('read')) {
               const data = await characteristic.readAsync();
-              this.logger.log(
-                `\x1b[31m[${deviceId}]\x1b[32m Raw Battery Data: ${data.toString('hex')}`,
-              );
+              this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Raw Battery Data: ${data.toString('hex')}`);
               const batteryLevel = data.readUInt8(0);
               this.logger.log(`${this.rsColor}Battery Level: ${batteryLevel}%`);
               this.eventEmitter.emit('battery.low', { level: batteryLevel });
@@ -192,36 +158,17 @@ export class BluetoothService implements OnModuleInit {
           if (characteristic.properties.includes('notify')) {
             await characteristic.subscribeAsync();
             characteristic.on('data', (data) => {
-              this.logger.log(
-                `\x1b[31m[${deviceId}]\x1b[32m Notification from ${characteristic.uuid}: ${data.toString('utf8')}`,
-              );
+              this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Notification from ${characteristic.uuid}: ${data.toString('utf8')}`);
             });
           }
         }
       }
     } catch (error) {
-      this.logger.error(
-        `\x1b[31m[${deviceId}]\x1b[32m Error connecting to device ${deviceId}: ${error}`,
-      );
+      this.logger.error(`\x1b[31m[${deviceId}]\x1b[32m Error connecting to device ${deviceId}: ${error}`);
       if (peripheral.state === 'connected') {
         await peripheral.disconnectAsync();
       }
     }
-  }
-
-  async disconnectAllDevices() {
-    this.logger.log('Disconnecting all devices...');
-    for (const [deviceId, peripheral] of this.connectedDevices.entries()) {
-      try {
-        if (peripheral.state === 'connected') {
-          await peripheral.disconnectAsync();
-          this.logger.log(`Disconnected device ${deviceId}.`);
-        }
-      } catch (error) {
-        this.logger.error(`Error disconnecting device ${deviceId}: ${error}`);
-      }
-    }
-    this.connectedDevices.clear();
   }
 
   private allDevicesConnected(): boolean {
@@ -265,9 +212,7 @@ function parseData(data) {
 function decodeSettings(data) {
   const cellCount = data.readUInt8(34);
   const startBalanceVoltage = data.readFloatLE(98);
-  console.log(
-    `Cell count: ${cellCount}, Start Balance Voltage: ${startBalanceVoltage}V`,
-  );
+  console.log(`Cell count: ${cellCount}, Start Balance Voltage: ${startBalanceVoltage}V`);
 }
 
 function decodeCellInfo(data) {
@@ -286,7 +231,7 @@ async function discoverServicesAndCharacteristics(device: noble.Peripheral) {
       const characteristics = await service.discoverCharacteristicsAsync([CHARACTERISTIC_UUID]);
       for (const characteristic of characteristics) {
         if (characteristic.properties.includes('notify')) {
-          this.logger.log(`Subscribing to notifications for characteristic ${characteristic.uuid}`);
+          console.log(`Subscribing to notifications for characteristic ${characteristic.uuid}`);
           await characteristic.subscribeAsync();
           characteristic.on('data', (data) => {
             parseData(data);
@@ -295,7 +240,7 @@ async function discoverServicesAndCharacteristics(device: noble.Peripheral) {
       }
     }
   } catch (error) {
-    this.logger.error(`Error in service/characteristic discovery: ${error.message}`);
+    console.error(`Error in service/characteristic discovery: ${error.message}`);
   }
 }
 
