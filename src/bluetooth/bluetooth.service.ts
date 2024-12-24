@@ -241,7 +241,7 @@ export class BluetoothService implements OnModuleInit {
   }
 }
 
-function parseData(data: Buffer) {
+function parseData(data) {
   const frameType = data[4];
 
   switch (frameType) {
@@ -258,7 +258,7 @@ function parseData(data: Buffer) {
   }
 }
 
-function decodeSettings(data: Buffer) {
+function decodeSettings(data) {
   const cellCount = data.readUInt8(34);
   const startBalanceVoltage = data.readFloatLE(98);
   console.log(
@@ -266,7 +266,7 @@ function decodeSettings(data: Buffer) {
   );
 }
 
-function decodeCellInfo(data: Buffer) {
+function decodeCellInfo(data) {
   const cells = [];
   for (let i = 0; i < 24; i++) {
     const cellVoltage = data.readUInt16LE(6 + i * 2) * 0.001;
