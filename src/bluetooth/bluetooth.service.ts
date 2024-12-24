@@ -33,8 +33,9 @@ export class BluetoothService implements OnModuleInit {
           this.logger.log(`Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
 
           if (
-            config.allowedDevices.includes(manufacturerData) ||
-            config.allowedDevices.includes(localName)
+            config.allowedDevices.some(
+              (device) => device.localName === deviceId || device.address === deviceId
+            )
           ) {
             if (
               this.connectedDevices.has(deviceId) &&
@@ -174,7 +175,7 @@ export class BluetoothService implements OnModuleInit {
   private allDevicesConnected(): boolean {
     const allowedDevices = config.allowedDevices;
     return allowedDevices.every((deviceId) =>
-      this.connectedDevices.has(deviceId),
+      this.connectedDevices.has(deviceId.localName) || this.connectedDevices.has(deviceId.address)
     );
   }
 
