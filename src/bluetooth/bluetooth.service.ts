@@ -8,8 +8,8 @@ import {
   stopScanning,
 } from 'src/utils/bluetooth.utils';
 
-import { EventEmitter } from 'events';
-EventEmitter.defaultMaxListeners = 20;
+// import { EventEmitter } from 'events';
+// EventEmitter.defaultMaxListeners = 20;
 
 const SERVICE_UUID = 'ffe0';
 const CHARACTERISTIC_UUID = 'ffe1';
@@ -25,7 +25,7 @@ export class BluetoothService implements OnModuleInit {
   async onModuleInit() {
     try {
       this.logger.log('Initializing Bluetooth...');
-      noble.removeAllListeners();
+      // noble.removeAllListeners();
 
       noble.on('discover', async (peripheral) => {
         try {
