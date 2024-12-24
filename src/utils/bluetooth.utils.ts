@@ -22,6 +22,11 @@ export async function startScanning(logger, SERVICE_UUID) {
 
 export async function stopScanning(logger) {
   try {
+    if (noble._state === 'poweredOn' && !noble._scanning) {
+      logger.log(`[BluetoothService] Scanning is already stopped.`);
+      return;
+    }
+
     await noble.stopScanningAsync();
     logger.log('Scanning stopped.');
   } catch (error) {

@@ -22,6 +22,8 @@ export class BluetoothService implements OnModuleInit {
   async onModuleInit() {
     try {
       this.logger.log('Initializing Bluetooth...');
+      noble.removeAllListeners();
+      noble.setMaxListeners(20);
 
       noble.on('discover', async (peripheral) => {
         try {
@@ -41,7 +43,7 @@ export class BluetoothService implements OnModuleInit {
               this.connectedDevices.has(deviceId) &&
               peripheral.state === 'connected'
             ) {
-              this.logger.log(`Device \x1b[31m${deviceId}\x1b[31m is already connected.`);
+              this.logger.warn(`Device \x1b[31m${deviceId}\x1b[31m is already connected.`);
               return;
             }
 
