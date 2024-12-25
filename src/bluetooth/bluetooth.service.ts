@@ -4,8 +4,6 @@ import { config } from 'configs/main.config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   getColorForRSSI,
-  startScanning,
-  stopScanning,
 } from 'src/utils/bluetooth.utils';
 
 import { EventEmitter } from 'events';
@@ -19,6 +17,7 @@ export class BluetoothService implements OnModuleInit {
   private readonly logger = new Logger(BluetoothService.name);
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
   private readonly rsColor = '\x1b[0m';
+  private activeScan = false;
 
   constructor(private eventEmitter: EventEmitter2) { }
 
@@ -81,7 +80,7 @@ export class BluetoothService implements OnModuleInit {
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
         try {
-          await startScanning(this.logger, SERVICE_UUID);
+          await this.startScanning(SERVICE_UUID);
         } catch (error) {
           this.logger.error(`\x1b[31m[setupBluetooth] Scan startup error: ${error.message}`);
         }
@@ -98,7 +97,7 @@ export class BluetoothService implements OnModuleInit {
     try {
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
-      // await stopScanning(this.logger); // TODO
+      // await this.stopScanning(); // TODO
       // this.logger.log(`[connectToDevice] Stopped scanning for ${deviceId}`);
 
       // Слухач на відключення та запуск скану нових повторно
@@ -109,7 +108,7 @@ export class BluetoothService implements OnModuleInit {
           this.connectedDevicesInfo();
 
           try {
-            await startScanning(this.logger, SERVICE_UUID);
+            await this.startScanning(SERVICE_UUID);
           } catch (error) {
             this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
           }
@@ -118,7 +117,7 @@ export class BluetoothService implements OnModuleInit {
 
       peripheral.on('connect', async () => {
         try {
-          await startScanning(this.logger, SERVICE_UUID);
+          await this.startScanning(SERVICE_UUID);
         } catch (error) {
           this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
         }
@@ -129,7 +128,7 @@ export class BluetoothService implements OnModuleInit {
 
         if (this.allDevicesConnected()) {
           this.logger.log('All devices connected. Stopping scan...');
-          await stopScanning(this.logger);
+          await this.stopScanning();
         }
       });
 
@@ -203,6 +202,32 @@ export class BluetoothService implements OnModuleInit {
     if (devices.length) {
       // this.eventEmitter.emit('devices.connected', { devices });
       this.logger.log(`Connected devices: ${JSON.stringify(devices, null, 2)}`);
+    }
+  }
+
+  private async startScanning(SERVICE_UUID) {
+    if (!this.activeScan) {
+      try {
+        // Battery Service '180f'
+        this.activeScan = true;
+        await noble.startScanningAsync([SERVICE_UUID], true);
+        this.logger.log('Scanning has started...');
+      } catch (error) {
+        this.logger.error(`Scan startup error: ${error.message}`);
+        this.activeScan = false;
+      }
+    }
+  }
+
+  private async stopScanning() {
+    if (this.activeScan) {
+      try {
+        await noble.stopScanningAsync();
+        this.activeScan = false;
+        this.logger.log('Scanning stopped.');
+      } catch (error) {
+        this.logger.error(`Error stopping scan: ${error.message}`);
+      }
     }
   }
 }
