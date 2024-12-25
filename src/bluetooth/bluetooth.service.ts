@@ -68,6 +68,14 @@ export class BluetoothService implements OnModuleInit {
       noble.on('error', (error) => {
         this.logger.error(`\x1b[31mPeripheral error: ${error.message}`);
       });
+      noble.on('scanStart', () => {
+        this.activeScan = true;
+        this.logger.log('Scanning has started...');
+      });
+      noble.on('scanStop', () => {
+        this.activeScan = false;
+        this.logger.log('Scanning stopped.');
+      });
 
       this.logger.log('Bluetooth initialization complete.');
       await this.setupBluetooth();
@@ -104,11 +112,8 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
 
     try {
-      // peripheral.removeAllListeners(); // TODO
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
-      // await this.stopScanning(); // TODO
-      // this.logger.log(`[connectToDevice] Stopped scanning for ${deviceId}`);
 
       // Слухач на відключення та запуск скану нових повторно
       peripheral.once('disconnect', async () => {
@@ -233,12 +238,9 @@ export class BluetoothService implements OnModuleInit {
     if (!this.activeScan) {
       try {
         // Battery Service '180f'
-        this.activeScan = true;
         await noble.startScanningAsync([], true);
-        this.logger.log('Scanning has started...');
       } catch (error) {
         this.logger.error(`Scan startup error: ${error.message}`);
-        this.activeScan = false;
       }
     }
   }
@@ -247,8 +249,6 @@ export class BluetoothService implements OnModuleInit {
     if (this.activeScan) {
       try {
         await noble.stopScanningAsync();
-        this.activeScan = false;
-        this.logger.log('Scanning stopped.');
       } catch (error) {
         this.logger.error(`Error stopping scan: ${error.message}`);
       }
