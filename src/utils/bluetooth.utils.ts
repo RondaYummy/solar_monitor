@@ -9,6 +9,7 @@ export function getColorForRSSI(rssi: number): string {
 }
 
 export function parseData(data) {
+  const frameType = data[4];
 
   switch (frameType) {
     case 0x01:
