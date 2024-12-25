@@ -104,7 +104,7 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
 
     try {
-      peripheral.removeAllListeners(); // TODO
+      // peripheral.removeAllListeners(); // TODO
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
       // await this.stopScanning(); // TODO
@@ -114,7 +114,7 @@ export class BluetoothService implements OnModuleInit {
       peripheral.once('disconnect', async () => {
         this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
 
-        peripheral.removeAllListeners();
+        // peripheral.removeAllListeners(); // TODO
 
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
