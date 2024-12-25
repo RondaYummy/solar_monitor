@@ -132,15 +132,15 @@ export class BluetoothService implements OnModuleInit {
       });
 
       peripheral.on('connect', async () => {
+        this.connectedDevices.set(deviceId, peripheral);
+        this.connectedDevicesInfo();
+        this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
+
         try {
           await this.startScanning();
         } catch (error) {
           this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
         }
-
-        this.connectedDevices.set(deviceId, peripheral);
-        this.connectedDevicesInfo();
-        this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
 
         if (this.allDevicesConnected()) {
           this.logger.log('All devices connected. Stopping scan...');
