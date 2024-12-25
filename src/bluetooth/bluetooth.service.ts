@@ -4,6 +4,7 @@ import { config } from 'configs/main.config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   getColorForRSSI,
+  parseData,
 } from 'src/utils/bluetooth.utils';
 
 import { EventEmitter } from 'events';
@@ -104,6 +105,9 @@ export class BluetoothService implements OnModuleInit {
       if (this.connectedDevices.has(deviceId)) {
         peripheral.once('disconnect', async () => {
           this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+
+          peripheral.removeAllListeners();
+
           this.connectedDevices.delete(deviceId);
           this.connectedDevicesInfo();
 
@@ -230,38 +234,6 @@ export class BluetoothService implements OnModuleInit {
       }
     }
   }
-}
-
-function parseData(data) {
-  const frameType = data[4];
-
-  switch (frameType) {
-    case 0x01:
-      console.log('Device settings frame received');
-      decodeSettings(data);
-      break;
-    case 0x02:
-      console.log('Cell information frame received');
-      decodeCellInfo(data);
-      break;
-    default:
-      console.warn('Unknown frame type:', frameType);
-  }
-}
-
-function decodeSettings(data) {
-  const cellCount = data.readUInt8(34);
-  const startBalanceVoltage = data.readFloatLE(98);
-  console.log(`Cell count: ${cellCount}, Start Balance Voltage: ${startBalanceVoltage}V`);
-}
-
-function decodeCellInfo(data) {
-  const cells = [];
-  for (let i = 0; i < 24; i++) {
-    const cellVoltage = data.readUInt16LE(6 + i * 2) * 0.001;
-    cells.push(cellVoltage);
-  }
-  console.log('Cell Voltages:', cells);
 }
 
 async function discoverServicesAndCharacteristics(device: noble.Peripheral) {
