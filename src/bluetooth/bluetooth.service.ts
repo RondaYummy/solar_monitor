@@ -97,7 +97,7 @@ export class BluetoothService implements OnModuleInit {
 
     try {
       await peripheral.connectAsync();
-      this.logger.log(`[connectToDevice] Connected to ${deviceId}`);
+      this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
       // await stopScanning(this.logger); // TODO
       // this.logger.log(`[connectToDevice] Stopped scanning for ${deviceId}`);
 
@@ -134,11 +134,11 @@ export class BluetoothService implements OnModuleInit {
       });
 
       // Далі можна отримати сервіси та характеристики
-      await new Promise((resolve) => setTimeout(resolve, 1000));
       const services = await peripheral.discoverServicesAsync([]);
       this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
       for (const service of services) {
+        this.logger.log(service, '\x1b[31mservice');
         const characteristics = await service.discoverCharacteristicsAsync([]);
         this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
 
