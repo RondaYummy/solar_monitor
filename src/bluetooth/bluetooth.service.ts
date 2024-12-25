@@ -112,14 +112,17 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
 
     try {
+      if (this.activeScan) {
+        await this.stopScanning();
+      }
+
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
 
       // Слухач на відключення та запуск скану нових повторно
       peripheral.once('disconnect', async () => {
         this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
-
-        // peripheral.removeAllListeners(); // TODO
+        peripheral.removeAllListeners();
 
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
@@ -148,6 +151,10 @@ export class BluetoothService implements OnModuleInit {
         }
       });
 
+      if (peripheral.state !== 'connected') {
+        this.logger.warn(`[${deviceId}] Peripheral is not connected. Skipping service discovery.`);
+        return;
+      }
       // Далі можна отримати сервіси та характеристики
       this.logger.log('Починаємо отримувати сервіси...');
       const services = await peripheral.discoverServicesAsync([]);
