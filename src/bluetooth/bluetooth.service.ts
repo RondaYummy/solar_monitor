@@ -152,23 +152,6 @@ export class BluetoothService implements OnModuleInit {
         const characteristics = await service.discoverCharacteristicsAsync([]);
         this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
 
-        if (service.uuid === '1800') {
-          // Це короткий 16 - бітний UUID для сервісу Generic Access.У контексті Bluetooth Low Energy(BLE), 16 - бітні UUID зазвичай зарезервовані для стандартних сервісів, визначених Bluetooth SIG.
-          const characteristics = await service.discoverCharacteristicsAsync(['2a00', '2a01', '2a04']);
-          console.log(characteristics, 'characteristicscharacteristics');
-          for (const characteristic of characteristics) {
-            if (characteristic.uuid === '2a00' && characteristic.properties.includes('read')) {
-              const data = await characteristic.readAsync();
-              this.logger.log(`Device Name: ${data.toString('utf8')}`);
-            }
-            if (characteristic.uuid === '2a01' && characteristic.properties.includes('read')) {
-              const data = await characteristic.readAsync();
-              const appearance = data.readUInt16LE(0);
-              this.logger.log(`Appearance: ${appearance}`);
-            }
-          }
-        }
-
         for (const characteristic of characteristics) {
           this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`);
           // const data = await characteristic.readAsync();
@@ -194,6 +177,19 @@ export class BluetoothService implements OnModuleInit {
             this.logger.log(
               `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
             );
+          }
+
+          if (service.uuid === '1800') {
+            // Це короткий 16 - бітний UUID для сервісу Generic Access.У контексті Bluetooth Low Energy(BLE), 16 - бітні UUID зазвичай зарезервовані для стандартних сервісів, визначених Bluetooth SIG.
+            if (characteristic.uuid === '2a00' && characteristic.properties.includes('read')) {
+              const data = await characteristic.readAsync();
+              this.logger.log(`Device Name: ${data.toString('utf8')}`);
+            }
+            if (characteristic.uuid === '2a01' && characteristic.properties.includes('read')) {
+              const data = await characteristic.readAsync();
+              const appearance = data.readUInt16LE(0);
+              this.logger.log(`Appearance: ${appearance}`);
+            }
           }
 
           // Якщо характеристика підтримує підписку (notify)
