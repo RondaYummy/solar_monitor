@@ -131,7 +131,7 @@ export class BluetoothService implements OnModuleInit {
         }
       });
 
-      peripheral.on('connect', async () => {
+      peripheral.once('connect', async () => {
         try {
           await this.startScanning();
         } catch (error) {

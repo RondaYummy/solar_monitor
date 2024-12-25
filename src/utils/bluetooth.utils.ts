@@ -1,41 +1,20 @@
-export function getColorForRSSI(rssi: number): string {
-  if (rssi >= -60) {
-    return '\x1b[34m'; // Синій для сильного сигналу
-  } else if (rssi >= -80) {
-    return '\x1b[33m'; // Жовтий для середнього сигналу
-  } else {
-    return '\x1b[31m'; // Червоний для слабкого сигналу
+// Read the battery level of the first found peripheral exposing the Battery Level characteristic
+
+const noble = require('@abandonware/noble');
+
+noble.on('stateChange', async (state) => {
+  if (state === 'poweredOn') {
+    await noble.startScanningAsync(['180f'], false);
   }
-}
+});
 
-export function parseData(data) {
-  const frameType = data[4];
+noble.on('discover', async (peripheral) => {
+  await noble.stopScanningAsync();
+  await peripheral.connectAsync();
+  const { characteristics } = await peripheral.discoverSomeServicesAndCharacteristicsAsync(['180f'], ['2a19']);
+  const batteryLevel = (await characteristics[0].readAsync())[0];
 
-  switch (frameType) {
-    case 0x01:
-      console.log('Device settings frame received');
-      decodeSettings(data);
-      break;
-    case 0x02:
-      console.log('Cell information frame received');
-      decodeCellInfo(data);
-      break;
-    default:
-      console.warn('Unknown frame type:', frameType);
-  }
-}
+  console.log(`${peripheral.address} (${peripheral.advertisement.localName}): ${batteryLevel}%`);
 
-export function decodeSettings(data) {
-  const cellCount = data.readUInt8(34);
-  const startBalanceVoltage = data.readFloatLE(98);
-  console.log(`Cell count: ${cellCount}, Start Balance Voltage: ${startBalanceVoltage}V`);
-}
-
-export function decodeCellInfo(data) {
-  const cells = [];
-  for (let i = 0; i < 24; i++) {
-    const cellVoltage = data.readUInt16LE(6 + i * 2) * 0.001;
-    cells.push(cellVoltage);
-  }
-  console.log('Cell Voltages:', cells);
-}
+  await peripheral.disconnectAsync();
+});
