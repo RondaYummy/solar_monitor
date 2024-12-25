@@ -10,8 +10,10 @@ import {
 import { EventEmitter } from 'events';
 EventEmitter.defaultMaxListeners = 20;
 
-const SERVICE_UUID = 'ffe0';
-const CHARACTERISTIC_UUID = 'ffe1';
+// const SERVICE_UUID = 'ffe0'; // 16-бітні
+// const CHARACTERISTIC_UUID = 'ffe1';
+const SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; // 128-бітний формат
+const CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
@@ -93,9 +95,16 @@ export class BluetoothService implements OnModuleInit {
 
   private async connectToDevice(peripheral: noble.Peripheral) {
     const deviceId = peripheral.advertisement.localName || peripheral.address || peripheral.advertisement.manufacturerData?.toString('hex');
+
+    if (this.connectedDevices.has(deviceId)) {
+      this.logger.warn(`Device ${deviceId} is already in process.`);
+      return;
+    }
+
     this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
 
     try {
+      peripheral.removeAllListeners(); // TODO
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
       // await this.stopScanning(); // TODO
