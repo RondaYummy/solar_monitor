@@ -8,7 +8,7 @@ import {
 } from 'src/utils/bluetooth.utils';
 
 import { EventEmitter } from 'events';
-EventEmitter.defaultMaxListeners = 20;
+EventEmitter.defaultMaxListeners = 50;
 
 // const SERVICE_UUID = 'ffe0'; // 16-бітні
 // const CHARACTERISTIC_UUID = 'ffe1';
@@ -52,7 +52,7 @@ export class BluetoothService implements OnModuleInit {
             }
 
             await this.connectToDevice(peripheral);
-            await discoverServicesAndCharacteristics(peripheral);
+            // await discoverServicesAndCharacteristics(peripheral); // TODO
           }
         } catch (error) {
           this.logger.error(`\x1b[31mError discover: ${error}`);
@@ -148,7 +148,7 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
       for (const service of services) {
-        this.logger.log(service, '\x1b[31mservice');
+        this.logger.log('\x1b[31mservice', service);
         const characteristics = await service.discoverCharacteristicsAsync([]);
         this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
 
@@ -168,17 +168,6 @@ export class BluetoothService implements OnModuleInit {
             }
           }
 
-          // Якщо характеристика підтримує читання
-          if (characteristic.properties.includes('read')) {
-            const data = await characteristic.readAsync();
-            const utf8String = data.toString('utf8'); // Якщо дані є текстом
-            const hexString = data.toString('hex'); // Якщо потрібен формат HEX
-
-            this.logger.log(
-              `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
-            );
-          }
-
           if (service.uuid === '1800') {
             // Це короткий 16 - бітний UUID для сервісу Generic Access.У контексті Bluetooth Low Energy(BLE), 16 - бітні UUID зазвичай зарезервовані для стандартних сервісів, визначених Bluetooth SIG.
             if (characteristic.uuid === '2a00' && characteristic.properties.includes('read')) {
@@ -190,6 +179,17 @@ export class BluetoothService implements OnModuleInit {
               const appearance = data.readUInt16LE(0);
               this.logger.log(`Appearance: ${appearance}`);
             }
+          }
+
+          // Якщо характеристика підтримує читання
+          if (characteristic.properties.includes('read')) {
+            const data = await characteristic.readAsync();
+            const utf8String = data.toString('utf8'); // Якщо дані є текстом
+            const hexString = data.toString('hex'); // Якщо потрібен формат HEX
+
+            this.logger.log(
+              `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
+            );
           }
 
           // Якщо характеристика підтримує підписку (notify)
