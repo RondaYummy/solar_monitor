@@ -83,7 +83,7 @@ export class BluetoothService implements OnModuleInit {
       if (state === 'poweredOn') {
         this.logger.log('Bluetooth is turned on, start scanning...');
         try {
-          await this.startScanning(SERVICE_UUID);
+          await this.startScanning();
         } catch (error) {
           this.logger.error(`\x1b[31m[setupBluetooth] Scan startup error: ${error.message}`);
         }
@@ -120,7 +120,7 @@ export class BluetoothService implements OnModuleInit {
         this.connectedDevicesInfo();
 
         try {
-          await this.startScanning(SERVICE_UUID);
+          await this.startScanning();
         } catch (error) {
           this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
         }
@@ -128,7 +128,7 @@ export class BluetoothService implements OnModuleInit {
 
       peripheral.on('connect', async () => {
         try {
-          await this.startScanning(SERVICE_UUID);
+          await this.startScanning();
         } catch (error) {
           this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
         }
@@ -216,12 +216,12 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  private async startScanning(SERVICE_UUID) {
+  private async startScanning() {
     if (!this.activeScan) {
       try {
         // Battery Service '180f'
         this.activeScan = true;
-        await noble.startScanningAsync([SERVICE_UUID], true);
+        await noble.startScanningAsync([], true);
         this.logger.log('Scanning has started...');
       } catch (error) {
         this.logger.error(`Scan startup error: ${error.message}`);
