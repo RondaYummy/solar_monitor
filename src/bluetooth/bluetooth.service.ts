@@ -108,20 +108,20 @@ export class BluetoothService implements OnModuleInit {
           this.connectedDevices.delete(deviceId);
           this.connectedDevicesInfo();
 
-          try {
-            await startScanning(this.logger, SERVICE_UUID);
-          } catch (error) {
-            this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
-          }
+          // try {
+          //   await startScanning(this.logger, SERVICE_UUID);
+          // } catch (error) {
+          //   this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
+          // }
         });
       }
 
       peripheral.on('connect', async () => {
-        try {
-          await startScanning(this.logger, SERVICE_UUID);
-        } catch (error) {
-          this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
-        }
+        // try {
+        //   await startScanning(this.logger, SERVICE_UUID);
+        // } catch (error) {
+        //   this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
+        // }
 
         this.connectedDevices.set(deviceId, peripheral);
         this.connectedDevicesInfo();
