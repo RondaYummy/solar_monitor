@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    # devices:
+    #   - "/dev/hci0:/dev/hci0"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - DEBUG=noble*
+    restart: unless-stopped
