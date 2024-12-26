@@ -65,13 +65,14 @@ export class BluetoothService implements OnModuleInit {
       const localName = peripheral.advertisement.localName;
       const rssiColor = getColorForRSSI(peripheral.rssi);
       const deviceId = localName || peripheral.address || manufacturerData;
-      this.logger.log(`Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
 
       if (
         config.allowedDevices.some(
           (device) => device.localName === deviceId || device.address === deviceId
         )
       ) {
+        this.logger.log(`Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
+
         if (
           this.connectedDevices.has(deviceId) &&
           peripheral.state === 'connected'
