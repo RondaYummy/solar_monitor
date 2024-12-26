@@ -92,81 +92,12 @@ export class BluetoothService implements OnModuleInit {
         peripheral.once('disconnect', async () => await this.onDisconnect(deviceId, peripheral));
         peripheral.on('connect', async () => await this.onConnect(deviceId, peripheral));
 
-        if (peripheral.state !== 'connected') {
-          this.logger.warn(`[${deviceId}] Peripheral is not connected. Skipping service discovery.`);
-          return;
-        }
         // Далі можна отримати сервіси та характеристики
         this.logger.log('Починаємо отримувати сервіси...');
         await this.discoverServicesAndCharacteristics(peripheral, deviceId);
-
-        // const services = await peripheral.discoverServicesAsync([]);
-        // this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
-
-        // for (const service of services) {
-        //   this.logger.log('\x1b[31mservice', service);
-        //   const characteristics = await service.discoverCharacteristicsAsync([]);
-        //   this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
-
-        //   for (const characteristic of characteristics) {
-        //     this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`);
-        //     const data = await characteristic.readAsync();
-
-        //     if (!data.length) {
-        //       this.logger.warn(`No data received from ${characteristic.uuid}`);
-        //     }
-
-        //     await this.processResponseData(data);
-        //     // this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
-
-        //     // Читання рівня заряду батареї ( не працююче? )
-        //     if (service.uuid === '180f' && characteristic.uuid === '2a19') {
-        //       if (characteristic.properties.includes('read')) {
-        //         const data = await characteristic.readAsync();
-        //         this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Raw Battery Data: ${data.toString('hex')}`);
-        //         const batteryLevel = data.readUInt8(0);
-        //         this.logger.log(`${this.rsColor}Battery Level: ${batteryLevel}%`);
-        //         this.eventEmitter.emit('battery.low', { level: batteryLevel });
-        //       }
-        //     }
-
-        //     if (service.uuid === '1800') {
-        //       // Це короткий 16 - бітний UUID для сервісу Generic Access.У контексті Bluetooth Low Energy(BLE), 16 - бітні UUID зазвичай зарезервовані для стандартних сервісів, визначених Bluetooth SIG.
-        //       if (characteristic.uuid === '2a00' && characteristic.properties.includes('read')) {
-        //         const data = await characteristic.readAsync();
-        //         this.logger.log(`Device Name: ${data.toString('utf8')}`);
-        //       }
-        //       if (characteristic.uuid === '2a01' && characteristic.properties.includes('read')) {
-        //         const data = await characteristic.readAsync();
-        //         const appearance = data.readUInt16LE(0);
-        //         this.logger.log(`Appearance: ${appearance}`);
-        //       }
-        //     }
-
-        //     // Якщо характеристика підтримує читання
-        //     if (characteristic.properties.includes('read')) {
-        //       const data = await characteristic.readAsync();
-        //       const utf8String = data.toString('utf8'); // Якщо дані є текстом
-        //       const hexString = data.toString('hex'); // Якщо потрібен формат HEX
-
-        //       this.logger.log(
-        //         `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
-        //       );
-        //     }
-
-        //     // Якщо характеристика підтримує підписку (notify)
-        //     if (characteristic.properties.includes('notify')) {
-        //       await characteristic.subscribeAsync();
-        //       characteristic.on('data', (data) => {
-        //         this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Notification from ${characteristic.uuid}: ${data.toString('utf8')}`);
-        //       });
-        //     }
-        //   }
-        // }
       }
     } catch (error) {
-      console.error(error);
-      // this.logger.error(`\x1b[31mError discover: ${error}`);
+      this.logger.error(`\x1b[31mError discover: ${error}`);
       await peripheral.disconnectAsync();
     }
   };
@@ -282,6 +213,11 @@ export class BluetoothService implements OnModuleInit {
 
   private async discoverServicesAndCharacteristics(device: noble.Peripheral, deviceId: string) {
     try {
+      if (device.state !== 'connected') {
+        this.logger.warn(`[${deviceId}] Peripheral is not connected. Skipping service discovery.`);
+        return;
+      }
+
       const services = await device.discoverServicesAsync([]);
       this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
