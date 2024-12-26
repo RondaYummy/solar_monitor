@@ -41,13 +41,17 @@ export class BluetoothService implements OnModuleInit {
       noble.on('scanStart', () => {
         if (!this.activeScan) {
           this.activeScan = true;
-          this.logger.log('\x1b[34Scanning has started...');
+          this.logger.log('\x1b[34mScanning has started...');
         }
       });
-      noble.on('scanStop', () => {
+      noble.on('scanStop', async () => {
         if (this.activeScan) {
           this.activeScan = false;
-          this.logger.log('Scanning stopped.');
+          this.logger.log('\x1b[31mScanning stopped.');
+        }
+
+        if (!this.allDevicesConnected()) {
+          await this.startScanning();
         }
       });
 
