@@ -155,7 +155,8 @@ export class BluetoothService implements OnModuleInit {
         }
       }
     } catch (error) {
-      this.logger.error(`\x1b[31mError discover: ${error}`);
+      console.error(error);
+      // this.logger.error(`\x1b[31mError discover: ${error}`);
       await peripheral.disconnectAsync();
     }
   }
