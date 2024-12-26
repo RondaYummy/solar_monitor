@@ -121,6 +121,7 @@ export class BluetoothService implements OnModuleInit {
 
   private async connectToDevice(peripheral: noble.Peripheral) {
     const deviceId = peripheral.advertisement.localName || peripheral.address || peripheral.advertisement.manufacturerData?.toString('hex');
+    peripheral?.removeAllListeners();
 
     if (this.connectedDevices.has(deviceId)) {
       this.logger.warn(`Device ${deviceId} is already in process.`);
@@ -183,8 +184,25 @@ export class BluetoothService implements OnModuleInit {
     this.connectedDevices.delete(deviceId);
     this.connectedDevicesInfo();
     try {
-      await this.connectToDevice(peripheral);
-      this.logger.log(`\x1b[34mDevice \x1b[31m${deviceId} \x1b[34mreconnected.`);
+      let attempts = 0;
+      const maxAttempts = 2;
+
+      const reconnect = async () => {
+        if (attempts >= maxAttempts) {
+          this.logger.error(`Failed to reconnect to ${deviceId} after ${maxAttempts} attempts.`);
+          return;
+        }
+        attempts++;
+        try {
+          await this.connectToDevice(peripheral);
+          this.logger.log(`\x1b[34mDevice \x1b[31m${deviceId} \x1b[34mreconnected after ${attempts} attempt(s).`);
+        } catch (error) {
+          this.logger.error(`Reconnect attempt ${attempts} failed for ${deviceId}: ${error.message}`);
+          setTimeout(reconnect, 2000);
+        }
+      };
+
+      reconnect();
     } catch (error) {
       this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
     }
