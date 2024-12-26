@@ -131,7 +131,7 @@ export class BluetoothService implements OnModuleInit {
 
   private async connectToDevice(peripheral: noble.Peripheral) {
     const deviceId = peripheral.advertisement.localName || peripheral.address || peripheral.advertisement.manufacturerData?.toString('hex');
-    peripheral?.removeAllListeners();
+    (peripheral as unknown as EventEmitter)?.removeAllListeners();
 
     if (this.connectedDevices.has(deviceId)) {
       this.logger.warn(`Device ${deviceId} is already in process.`);
