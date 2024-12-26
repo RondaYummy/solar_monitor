@@ -252,7 +252,6 @@ export class BluetoothService implements OnModuleInit {
 
   private async onConnect(deviceId: string, peripheral: noble.Peripheral) {
     if (this.connectedDevices.has(deviceId)) {
-      this.logger.warn(`Device ${deviceId} is already connected. Skipping.`);
       return;
     }
 
