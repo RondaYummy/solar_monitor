@@ -93,7 +93,7 @@ export class BluetoothService implements OnModuleInit {
         }
         // Далі можна отримати сервіси та характеристики
         this.logger.log('Починаємо отримувати сервіси...');
-        await discoverServicesAndCharacteristics(peripheral);
+        await this.discoverServicesAndCharacteristics(peripheral, deviceId);
 
         // const services = await peripheral.discoverServicesAsync([]);
         // this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
@@ -275,72 +275,41 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  // ****************************************************************
-  private parseCellVoltages(data: Buffer): number[] {
-    // Знаходимо індекс 0x79 (початок даних про напругу осередків)
-    const cellVoltageStart = data.indexOf(0x79);
-    if (cellVoltageStart === -1) {
-      this.logger.error('Cell voltage data (0x79) not found in the response.');
-      throw new Error('Cell voltage data (0x79) not found.');
-    }
-
-    // Отримуємо довжину даних напруги (перший байт після 0x79)
-    const length = data[cellVoltageStart + 1];
-    const cellVoltageData = data.slice(cellVoltageStart + 2, cellVoltageStart + 2 + length);
-
-    // Кількість осередків визначається через довжину масиву
-    const numberOfCells = cellVoltageData.length / 3;
-    const cellVoltages: number[] = [];
-
-    for (let i = 0; i < numberOfCells; i++) {
-      const cellIndex = i * 3; // Кожен осередок представлений 3 байтами
-      const voltage = (cellVoltageData[cellIndex + 1] << 8) | cellVoltageData[cellIndex + 2]; // 16-бітна напруга
-      cellVoltages.push(voltage * 0.001); // Конвертуємо вольти (з мВ)
-    }
-
-    return cellVoltages;
-  }
-
-  private calculateAverageCellVoltage(cellVoltages: number[]): number {
-    const totalVoltage = cellVoltages.reduce((sum, voltage) => sum + voltage, 0);
-    return totalVoltage / cellVoltages.length;
-  }
-
-  private async processResponseData(data: Buffer) {
+  private async discoverServicesAndCharacteristics(device: noble.Peripheral, deviceId: string) {
     try {
-      // Парсимо дані про напругу осередків
-      const cellVoltages = this.parseCellVoltages(data);
-      // Обчислюємо середню напругу
-      const averageVoltage = this.calculateAverageCellVoltage(cellVoltages);
+      const services = await device.discoverServicesAsync([]);
+      this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
-      this.logger.log(`Average Cell Voltage: ${averageVoltage.toFixed(3)} V`);
+      for (const service of services) {
+        this.logger.log('\x1b[31mservice', service);
 
-      // Передача або обробка середньої напруги
-      this.eventEmitter.emit('average.cell.voltage', { averageVoltage });
-    } catch (error) {
-      this.logger.error(`Error processing cell voltages: ${error.message}`);
-    }
-  }
+        const characteristics = await service.discoverCharacteristicsAsync([]);
+        for (const characteristic of characteristics) {
+          this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
 
-}
+          // Якщо характеристика підтримує читання
+          if (characteristic.properties.includes('read')) {
+            const data = await characteristic.readAsync();
+            const utf8String = data.toString('utf8'); // Якщо дані є текстом
+            const hexString = data.toString('hex'); // Якщо потрібен формат HEX
 
-async function discoverServicesAndCharacteristics(device: noble.Peripheral) {
-  try {
-    const services = await device.discoverServicesAsync([]);
-    for (const service of services) {
-      const characteristics = await service.discoverCharacteristicsAsync([]);
-      for (const characteristic of characteristics) {
-        if (characteristic.properties.includes('notify')) {
-          console.log(`Subscribing to notifications for characteristic ${characteristic.uuid}`);
-          await characteristic.subscribeAsync();
-          characteristic.on('data', (data) => {
-            parseData(data);
-          });
+            this.logger.log(
+              `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
+            );
+          }
+
+          if (characteristic.properties.includes('notify')) {
+            console.log(`Subscribing to notifications for characteristic ${characteristic.uuid}`);
+            await characteristic.subscribeAsync();
+            characteristic.on('data', (data) => {
+              parseData(data);
+            });
+          }
         }
       }
+    } catch (error) {
+      console.error(`Error in service/characteristic discovery: ${error.message}`);
     }
-  } catch (error) {
-    console.error(`Error in service/characteristic discovery: ${error.message}`);
   }
 }
 
