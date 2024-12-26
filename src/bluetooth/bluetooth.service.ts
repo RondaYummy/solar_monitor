@@ -160,7 +160,8 @@ export class BluetoothService implements OnModuleInit {
     const devices = Array.from(this.connectedDevices.values()).map((device) => {
       const macAddress = device.address.toUpperCase();
       const localName = device.advertisement.localName || 'Unknown';
-      return { localName, address: macAddress };
+      const state = device.state;
+      return { localName, address: macAddress, state };
     });
 
     if (devices.length) {
