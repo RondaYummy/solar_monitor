@@ -54,7 +54,7 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  private async onDiscover(peripheral: noble.Peripheral) {
+  private onDiscover = async (peripheral: noble.Peripheral) => {
     try {
       const manufacturerData =
         peripheral.advertisement.manufacturerData?.toString('hex');
@@ -159,7 +159,7 @@ export class BluetoothService implements OnModuleInit {
       // this.logger.error(`\x1b[31mError discover: ${error}`);
       await peripheral.disconnectAsync();
     }
-  }
+  };
 
   private async setupBluetooth() {
     noble.on('stateChange', async (state) => {
