@@ -59,7 +59,7 @@ export class BluetoothService implements OnModuleInit {
         }
 
         if (!this.allDevicesConnected()) {
-          await this.startScanning();
+          // await this.startScanning(); // TODO
           this.connectedDevicesInfo();
         }
       });
