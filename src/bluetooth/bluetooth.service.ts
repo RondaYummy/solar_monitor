@@ -86,7 +86,7 @@ export class BluetoothService implements OnModuleInit {
           (device) => device.localName === deviceId || device.address === deviceId
         )
       ) {
-        this.logger.log(`Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
+        this.logger.log(`[${deviceId}] Discovered peripheral: \x1b[31m${deviceId}\x1b[32m, RSSI: ${rssiColor}${peripheral.rssi}`);
 
         if (
           this.connectedDevices.has(deviceId) &&
@@ -131,7 +131,8 @@ export class BluetoothService implements OnModuleInit {
 
   private async connectToDevice(peripheral: noble.Peripheral) {
     const deviceId = peripheral.advertisement.localName || peripheral.address || peripheral.advertisement.manufacturerData?.toString('hex');
-    (peripheral as unknown as EventEmitter)?.removeAllListeners();
+    (peripheral as unknown as EventEmitter)?.removeListener('disconnect', this.onDisconnect);
+    (peripheral as unknown as EventEmitter)?.removeListener('connect', this.onConnect);
 
     if (this.connectedDevices.has(deviceId)) {
       this.logger.warn(`Device ${deviceId} is already in process.`);
@@ -190,7 +191,7 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async onDisconnect(deviceId: string, peripheral: noble.Peripheral) {
-    this.logger.warn(`${deviceId} disconnected! Restarting scan...`);
+    this.logger.warn(`[${deviceId}] ${deviceId} disconnected! Restarting scan...`);
 
     this.connectedDevices.delete(deviceId);
     this.connectedDevicesInfo();
@@ -200,22 +201,22 @@ export class BluetoothService implements OnModuleInit {
 
       const reconnect = async () => {
         if (attempts >= maxAttempts) {
-          this.logger.error(`Failed to reconnect to ${deviceId} after ${maxAttempts} attempts.`);
+          this.logger.error(`[${deviceId}] Failed to reconnect to ${deviceId} after ${maxAttempts} attempts.`);
           return;
         }
         attempts++;
         try {
           await this.connectToDevice(peripheral);
-          this.logger.log(`\x1b[34mDevice \x1b[31m${deviceId} \x1b[34mreconnected after ${attempts} attempt(s).`);
+          this.logger.log(`[${deviceId}] \x1b[34mDevice \x1b[31m${deviceId} \x1b[34mreconnected after ${attempts} attempt(s).`);
         } catch (error) {
-          this.logger.error(`Reconnect attempt ${attempts} failed for ${deviceId}: ${error.message}`);
+          this.logger.error(`[${deviceId}] Reconnect attempt ${attempts} failed for ${deviceId}: ${error.message}`);
           setTimeout(reconnect, 2000);
         }
       };
 
       reconnect();
     } catch (error) {
-      this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
+      this.logger.error(`[${deviceId}] [disconnect] Failed to start scanning: ${error.message}`);
     }
   }
 
@@ -226,12 +227,12 @@ export class BluetoothService implements OnModuleInit {
 
     this.connectedDevices.set(deviceId, peripheral);
     this.connectedDevicesInfo();
-    this.logger.log(`\x1b[34mDevice \x1b[31m${deviceId}\x1b[34m connected successfully.`);
+    this.logger.log(`[${deviceId}] \x1b[34mDevice \x1b[31m${deviceId}\x1b[34m connected successfully.`);
 
     try {
       await this.startScanning();
     } catch (error) {
-      this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
+      this.logger.error(`[${deviceId}] [connect] Failed to start scanning: ${error.message}`);
     }
 
     if (this.allDevicesConnected() && this.activeScan) {
@@ -251,7 +252,7 @@ export class BluetoothService implements OnModuleInit {
       this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
       for (const service of services) {
-        this.logger.log('\x1b[31mservice', service);
+        this.logger.log(`[${deviceId}] \x1b[31mservice`, service);
 
         const characteristics = await service.discoverCharacteristicsAsync([]);
         for (const characteristic of characteristics) {
@@ -269,7 +270,7 @@ export class BluetoothService implements OnModuleInit {
           }
 
           if (characteristic.properties.includes('notify')) {
-            console.log(`Subscribing to notifications for characteristic ${characteristic.uuid}`);
+            console.log(`[${deviceId}] Subscribing to notifications for characteristic ${characteristic.uuid}`);
             await characteristic.subscribeAsync();
             characteristic.on('data', (data) => {
               parseData(data);
@@ -278,7 +279,7 @@ export class BluetoothService implements OnModuleInit {
         }
       }
     } catch (error) {
-      console.error(`Error in service/characteristic discovery: ${error.message}`);
+      console.error(`[${deviceId}] Error in service/characteristic discovery: ${error.message}`);
     }
   }
 }
