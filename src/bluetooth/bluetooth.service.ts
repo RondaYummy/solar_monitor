@@ -66,6 +66,10 @@ export class BluetoothService implements OnModuleInit {
 
       this.logger.log('\x1b[34mBluetooth initialization complete.');
       await this.setupBluetooth();
+
+      setInterval(() => {
+        this.checkStateDevices();
+      }, 10000);
     } catch (error) {
       this.logger.error(`\x1b[31monModuleInit: ${error}`);
     }
