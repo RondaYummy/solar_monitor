@@ -71,6 +71,16 @@ export class BluetoothService implements OnModuleInit {
       const rssiColor = getColorForRSSI(peripheral.rssi);
       const deviceId = localName || peripheral.address || manufacturerData;
 
+      if (!deviceId) {
+        this.logger.warn('Discovered a device without identifier. Skipping.');
+        return;
+      }
+
+      if (this.connectedDevices.has(deviceId)) {
+        this.logger.warn(`Device ${deviceId} is already in process or connected.`);
+        return;
+      }
+
       if (
         config.allowedDevices.some(
           (device) => device.localName === deviceId || device.address === deviceId
