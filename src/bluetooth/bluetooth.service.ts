@@ -12,14 +12,22 @@ EventEmitter.defaultMaxListeners = 50;
 
 // const SERVICE_UUID = 'ffe0'; // 16-бітні
 // const CHARACTERISTIC_UUID = 'ffe1';
-const SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; // 128-бітний формат
-const CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+// const SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; // 128-бітний формат
+// const CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+enum BluetoothState {
+  'Unknown' = 'unknown',
+  'Resetting' = 'resetting',
+  'Unsupported' = 'unsupported',
+  'Unauthorized' = 'unauthorized',
+  'PoweredOff' = 'poweredOff',
+  'PoweredOn' = 'poweredOn'
+}
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
   private readonly logger = new Logger(BluetoothService.name);
   private connectedDevices: Map<string, noble.Peripheral> = new Map();
-  private readonly rsColor = '\x1b[0m';
   private activeScan = false;
 
   constructor(private eventEmitter: EventEmitter2) { }
@@ -157,7 +165,10 @@ export class BluetoothService implements OnModuleInit {
     );
   }
 
+
   private connectedDevicesInfo(): void {
+    this.checkStateDevices();
+
     const devices = Array.from(this.connectedDevices.values()).map((device) => {
       const macAddress = device.address.toUpperCase();
       const localName = device.advertisement.localName || 'Unknown';
@@ -168,6 +179,14 @@ export class BluetoothService implements OnModuleInit {
     if (devices.length) {
       // this.eventEmitter.emit('devices.connected', { devices });
       this.logger.log(`Connected devices: ${JSON.stringify(devices, null, 2)}`);
+    }
+  }
+
+  private checkStateDevices() {
+    for (const [deviceId, peripheral] of this.connectedDevices.entries()) {
+      if (peripheral.state !== 'connected') {
+        this.connectedDevices.delete(deviceId);
+      }
     }
   }
 
@@ -283,7 +302,7 @@ export class BluetoothService implements OnModuleInit {
         }
       }
     } catch (error) {
-      console.error(`[${deviceId}] Error in service/characteristic discovery: ${error.message}`);
+      this.logger.error(`[${deviceId}] Error in service/characteristic discovery: ${error.message}`);
     }
   }
 }
