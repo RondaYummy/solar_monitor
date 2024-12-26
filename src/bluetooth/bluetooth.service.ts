@@ -52,7 +52,6 @@ export class BluetoothService implements OnModuleInit {
             }
 
             await this.connectToDevice(peripheral);
-            // await discoverServicesAndCharacteristics(peripheral); // TODO
           }
         } catch (error) {
           this.logger.error(`\x1b[31mError discover: ${error}`);
@@ -112,10 +111,9 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
 
     try {
-      if (this.activeScan) {
-        await this.stopScanning();
-      }
-
+      // if (this.activeScan) {
+      //   await this.stopScanning();
+      // }
       await peripheral.connectAsync();
       this.logger.log(`[connectToDevice] Connected to \x1b[31m${deviceId}`);
 
@@ -125,7 +123,6 @@ export class BluetoothService implements OnModuleInit {
 
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
-
         try {
           await this.startScanning();
         } catch (error) {
@@ -156,6 +153,8 @@ export class BluetoothService implements OnModuleInit {
       }
       // Далі можна отримати сервіси та характеристики
       this.logger.log('Починаємо отримувати сервіси...');
+      await discoverServicesAndCharacteristics(peripheral);
+
       const services = await peripheral.discoverServicesAsync([]);
       this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
@@ -166,8 +165,13 @@ export class BluetoothService implements OnModuleInit {
 
         for (const characteristic of characteristics) {
           this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Characteristic: ${characteristic.uuid}, Properties: ${characteristic.properties.join(', ')}`);
-          const data = await characteristic.readAsync(); // TODO
-          await this.processResponseData(data); // TODO
+          const data = await characteristic.readAsync();
+
+          if (!data.length) {
+            this.logger.warn(`No data received from ${characteristic.uuid}`);
+          }
+
+          await this.processResponseData(data);
           // this.logger.log(`Raw Battery Data: ${data.toString('hex')}`);
 
           // Читання рівня заряду батареї ( не працююче? )
@@ -243,13 +247,11 @@ export class BluetoothService implements OnModuleInit {
   }
 
   private async startScanning() {
-    if (!this.activeScan) {
-      try {
-        // Battery Service '180f'
-        await noble.startScanningAsync([], true);
-      } catch (error) {
-        this.logger.error(`Scan startup error: ${error.message}`);
-      }
+    try {
+      // Battery Service '180f'
+      await noble.startScanningAsync([], true);
+    } catch (error) {
+      this.logger.error(`Scan startup error: ${error.message}`);
     }
   }
 
@@ -271,45 +273,45 @@ export class BluetoothService implements OnModuleInit {
       this.logger.error('Cell voltage data (0x79) not found in the response.');
       throw new Error('Cell voltage data (0x79) not found.');
     }
-  
+
     // Отримуємо довжину даних напруги (перший байт після 0x79)
     const length = data[cellVoltageStart + 1];
     const cellVoltageData = data.slice(cellVoltageStart + 2, cellVoltageStart + 2 + length);
-  
+
     // Кількість осередків визначається через довжину масиву
     const numberOfCells = cellVoltageData.length / 3;
     const cellVoltages: number[] = [];
-  
+
     for (let i = 0; i < numberOfCells; i++) {
       const cellIndex = i * 3; // Кожен осередок представлений 3 байтами
       const voltage = (cellVoltageData[cellIndex + 1] << 8) | cellVoltageData[cellIndex + 2]; // 16-бітна напруга
       cellVoltages.push(voltage * 0.001); // Конвертуємо вольти (з мВ)
     }
-  
+
     return cellVoltages;
   }
-  
+
   private calculateAverageCellVoltage(cellVoltages: number[]): number {
     const totalVoltage = cellVoltages.reduce((sum, voltage) => sum + voltage, 0);
     return totalVoltage / cellVoltages.length;
   }
-  
+
   private async processResponseData(data: Buffer) {
     try {
       // Парсимо дані про напругу осередків
       const cellVoltages = this.parseCellVoltages(data);
       // Обчислюємо середню напругу
       const averageVoltage = this.calculateAverageCellVoltage(cellVoltages);
-  
+
       this.logger.log(`Average Cell Voltage: ${averageVoltage.toFixed(3)} V`);
-  
+
       // Передача або обробка середньої напруги
       this.eventEmitter.emit('average.cell.voltage', { averageVoltage });
     } catch (error) {
       this.logger.error(`Error processing cell voltages: ${error.message}`);
     }
   }
-  
+
 }
 
 async function discoverServicesAndCharacteristics(device: noble.Peripheral) {
