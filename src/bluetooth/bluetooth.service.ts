@@ -111,6 +111,7 @@ export class BluetoothService implements OnModuleInit {
         await this.connectToDevice(peripheral);
 
         // Слухач на відключення та підключення
+        this.logger.log('Вішаємо лістенери на дісконект та конект....');
         peripheral.once('disconnect', async () => await this.onDisconnect(deviceId, peripheral));
         peripheral.on('connect', async () => await this.onConnect(deviceId, peripheral));
 
@@ -254,7 +255,7 @@ export class BluetoothService implements OnModuleInit {
 
     try {
       await this.stopScanning();
-      // await this.startScanning();
+      // await this.startScanning(); // TODO
     } catch (error) {
       this.logger.error(`[${deviceId}] [connect] Failed to start scanning: ${error.message}`);
     }
