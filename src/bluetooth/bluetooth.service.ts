@@ -243,13 +243,19 @@ export class BluetoothService implements OnModuleInit {
     this.connectedDevices.delete(deviceId);
     this.connectedDevicesInfo();
     try {
-      await this.startScanning();
+      await this.connectToDevice(peripheral);
+      this.logger.log(`Device ${deviceId} reconnected.`);
     } catch (error) {
       this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
     }
   }
 
   private async onConnect(deviceId: string, peripheral: noble.Peripheral) {
+    if (this.connectedDevices.has(deviceId)) {
+      this.logger.warn(`Device ${deviceId} is already connected. Skipping.`);
+      return;
+    }
+
     this.connectedDevices.set(deviceId, peripheral);
     this.connectedDevicesInfo();
     this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
@@ -260,7 +266,7 @@ export class BluetoothService implements OnModuleInit {
       this.logger.error(`[connect] Failed to start scanning: ${error.message}`);
     }
 
-    if (this.allDevicesConnected()) {
+    if (this.allDevicesConnected() && this.activeScan) {
       this.logger.log('All devices connected. Stopping scan...');
       await this.stopScanning();
     }
