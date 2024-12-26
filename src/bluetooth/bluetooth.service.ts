@@ -39,12 +39,16 @@ export class BluetoothService implements OnModuleInit {
         this.logger.error(`\x1b[31mPeripheral error: ${error.message}`);
       });
       noble.on('scanStart', () => {
-        this.activeScan = true;
-        this.logger.log('Scanning has started...');
+        if (!this.activeScan) {
+          this.activeScan = true;
+          this.logger.log('Scanning has started...');
+        }
       });
       noble.on('scanStop', () => {
-        this.activeScan = false;
-        this.logger.log('Scanning stopped.');
+        if (this.activeScan) {
+          this.activeScan = false;
+          this.logger.log('Scanning stopped.');
+        }
       });
 
       this.logger.log('\x1b[34mBluetooth initialization complete.');
@@ -189,7 +193,6 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`Connection to \x1b[31m${deviceId}\x1b[32m...`);
     try {
       await peripheral.connectAsync();
-      this.logger.log(`\x1b[34m[connectToDevice] Connected to \x1b[31m${deviceId}`);
     } catch (error) {
       this.logger.error(`\x1b[31m[${deviceId}]\x1b[32m Error connecting to device ${deviceId}: ${error}`);
       if (peripheral.state === 'connected') {
@@ -244,7 +247,7 @@ export class BluetoothService implements OnModuleInit {
     this.connectedDevicesInfo();
     try {
       await this.connectToDevice(peripheral);
-      this.logger.log(`Device ${deviceId} reconnected.`);
+      this.logger.log(`\x1b[34mDevice \x1b[31m${deviceId} \x1b[34mreconnected.`);
     } catch (error) {
       this.logger.error(`[disconnect] Failed to start scanning: ${error.message}`);
     }
@@ -257,7 +260,7 @@ export class BluetoothService implements OnModuleInit {
 
     this.connectedDevices.set(deviceId, peripheral);
     this.connectedDevicesInfo();
-    this.logger.log(`Device \x1b[31m${deviceId}\x1b[32m connected successfully.`);
+    this.logger.log(`\x1b[34mDevice \x1b[31m${deviceId}\x1b[34m connected successfully.`);
 
     try {
       await this.startScanning();
