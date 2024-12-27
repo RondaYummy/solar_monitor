@@ -196,6 +196,7 @@ export class BluetoothService implements OnModuleInit {
       } else {
         this.logger.log(peripheral.state + ' discoverServicesAsync');
         peripheral.discoverServices();
+        this.logger.log('discoverServices');
         const services = await peripheral.discoverServicesAsync();
         console.log(services, 'services');
 
