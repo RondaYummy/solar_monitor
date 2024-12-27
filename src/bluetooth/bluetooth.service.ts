@@ -196,13 +196,12 @@ export class BluetoothService implements OnModuleInit {
       } else {
         this.logger.log(peripheral.state + ' discoverServicesAsync');
         peripheral.discoverServices();
-        this.logger.log('discoverServices');
         const services = await peripheral.discoverServicesAsync();
-        console.log(services, 'services');
 
         for (const service of services) {
-          this.logger.log(`[${deviceId}] \x1b[31mservice`, service);
+          this.logger.log(`[${deviceId}] \x1b[31mservice`, service,);
 
+          peripheral.discoverCharacteristics();
           const characteristics = await service.discoverCharacteristicsAsync();
           for (const characteristic of characteristics) {
             this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
@@ -216,14 +215,6 @@ export class BluetoothService implements OnModuleInit {
               this.logger.log(
                 `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
               );
-            }
-
-            if (characteristic.properties.includes('notify')) {
-              console.log(`[${deviceId}] Subscribing to notifications for characteristic ${characteristic.uuid}`);
-              await characteristic.subscribeAsync();
-              characteristic.on('data', (data) => {
-                parseData(data);
-              });
             }
           }
         }
