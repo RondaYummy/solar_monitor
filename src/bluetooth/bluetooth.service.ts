@@ -194,10 +194,38 @@ export class BluetoothService implements OnModuleInit {
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
       } else {
-        // this.logger.log(peripheral.state + ' discoverServicesAsync');
-        // peripheral.discoverServices();
-        // const services = await peripheral.discoverServicesAsync();
-        // console.log(services, 'services');
+        this.logger.log(peripheral.state + ' discoverServicesAsync');
+        peripheral.discoverServices();
+        const services = await peripheral.discoverServicesAsync();
+        console.log(services, 'services');
+
+        for (const service of services) {
+          this.logger.log(`[${deviceId}] \x1b[31mservice`, service);
+
+          const characteristics = await service.discoverCharacteristicsAsync([]);
+          for (const characteristic of characteristics) {
+            this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
+
+            // Якщо характеристика підтримує читання
+            if (characteristic.properties.includes('read')) {
+              const data = await characteristic.readAsync();
+              const utf8String = data.toString('utf8'); // Якщо дані є текстом
+              const hexString = data.toString('hex'); // Якщо потрібен формат HEX
+
+              this.logger.log(
+                `\x1b[31m[${deviceId}]\x1b[32m Data from characteristic ${characteristic.uuid}: UTF-8: ${utf8String}, HEX: ${hexString}`,
+              );
+            }
+
+            if (characteristic.properties.includes('notify')) {
+              console.log(`[${deviceId}] Subscribing to notifications for characteristic ${characteristic.uuid}`);
+              await characteristic.subscribeAsync();
+              characteristic.on('data', (data) => {
+                parseData(data);
+              });
+            }
+          }
+        }
       }
     }
   }
@@ -281,11 +309,11 @@ export class BluetoothService implements OnModuleInit {
       }
 
       this.logger.log('discoverServicesAsync');
-      device.discoverServices();
+      // device.discoverServices();
       const services = await device.discoverServicesAsync([]);
-      device.once('servicesDiscover', async (services) => {
-        this.logger.error(`servicesDiscover`, services);
-      });
+      // device.once('servicesDiscover', async (services) => {
+      //   this.logger.error(`servicesDiscover`, services);
+      // });
 
       this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered services: ${services.length}`);
 
