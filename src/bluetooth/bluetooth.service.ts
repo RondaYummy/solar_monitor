@@ -261,7 +261,7 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`[${deviceId}] \x1b[34mDevice \x1b[31m${deviceId}\x1b[34m connected successfully.`);
 
     try {
-      await this.stopScanning();
+      // await this.stopScanning();
       // await this.startScanning(); // TODO
     } catch (error) {
       this.logger.error(`[${deviceId}] [connect] Failed to start scanning: ${error.message}`);
