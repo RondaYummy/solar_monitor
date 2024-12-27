@@ -201,7 +201,6 @@ export class BluetoothService implements OnModuleInit {
         for (const service of services) {
           this.logger.log(`[${deviceId}] \x1b[31mservice`, service,);
 
-          peripheral.discoverCharacteristics();
           const characteristics = await service.discoverCharacteristicsAsync();
           for (const characteristic of characteristics) {
             this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
