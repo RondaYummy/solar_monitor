@@ -59,8 +59,8 @@ export class BluetoothService implements OnModuleInit {
         }
 
         if (!this.allDevicesConnected()) {
-          await this.startScanning();
-          // this.connectedDevicesInfo();
+          // await this.startScanning();
+          this.connectedDevicesInfo();
         }
       });
 
@@ -69,6 +69,7 @@ export class BluetoothService implements OnModuleInit {
 
       setInterval(() => {
         this.checkStateDevices();
+        this.connectedDevicesInfo();
       }, 10000);
     } catch (error) {
       this.logger.error(`\x1b[31monModuleInit: ${error}`);
