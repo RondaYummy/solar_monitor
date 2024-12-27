@@ -59,7 +59,7 @@ export class BluetoothService implements OnModuleInit {
         }
 
         if (!this.allDevicesConnected()) {
-          // await this.startScanning();
+          await this.startScanning();
           this.connectedDevicesInfo();
         }
       });
@@ -289,8 +289,8 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(`[${deviceId}] \x1b[34mDevice \x1b[31m${deviceId}\x1b[34m connected successfully.`);
 
     try {
-      // await this.stopScanning();
-      // await this.startScanning(); // TODO
+      // await this.stopScanning(); // TODO
+      await this.startScanning();
     } catch (error) {
       this.logger.error(`[${deviceId}] [connect] Failed to start scanning: ${error.message}`);
     }
