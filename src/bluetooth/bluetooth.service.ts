@@ -194,6 +194,7 @@ export class BluetoothService implements OnModuleInit {
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
       } else {
+        this.logger.log('discoverServicesAsync discoverServicesAsync discoverServicesAsync discoverServicesAsync');
         const services = await peripheral.discoverServicesAsync();
         console.log(services, 'services');
       }
