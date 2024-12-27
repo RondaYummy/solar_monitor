@@ -194,10 +194,10 @@ export class BluetoothService implements OnModuleInit {
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
       } else {
-        this.logger.log(peripheral.state + ' discoverServicesAsync');
-        peripheral.discoverServices(); // any service UUID
-        const services = await peripheral.discoverServicesAsync();
-        console.log(services, 'services');
+        // this.logger.log(peripheral.state + ' discoverServicesAsync');
+        // peripheral.discoverServices();
+        // const services = await peripheral.discoverServicesAsync();
+        // console.log(services, 'services');
       }
     }
   }
@@ -281,6 +281,7 @@ export class BluetoothService implements OnModuleInit {
       }
 
       this.logger.log('discoverServicesAsync');
+      device.discoverServices();
       const services = await device.discoverServicesAsync([]);
       device.once('servicesDiscover', async (services) => {
         this.logger.error(`servicesDiscover`, services);
