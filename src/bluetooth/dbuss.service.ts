@@ -101,27 +101,30 @@ export class BluetoothService implements OnModuleInit {
       }
 
       // Ітерація по сервісах і виведення їхніх UUID
-      for (const servicePath of services) {
-        const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
-        const characteristics = Object.keys(objects).filter((path) =>
-          path.startsWith(servicePath) && path.includes('char')
-        );
+      for (const charPath of characteristics) {
+        console.log(`Inspecting characteristic: ${charPath}`);
+        try {
+          const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+          const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
 
-        for (const charPath of characteristics) {
-          try {
-            const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-
-            if (charInterface) {
-              console.log(`Characteristic found: ${charPath}`);
-              const uuid = await charProxy.getInterface('org.freedesktop.DBus.Properties').Get('org.bluez.GattCharacteristic1', 'UUID');
-              console.log(`UUID: ${uuid.value}`);
-            } else {
-              console.warn(`No GattCharacteristic1 interface for ${charPath}`);
-            }
-          } catch (err) {
-            console.error(`Error processing characteristic ${charPath}:`, err);
+          const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+          if (!flags.value.includes('read') && !flags.value.includes('notify')) {
+            console.warn(`Characteristic ${charPath} does not support read or notify.`);
+            continue;
           }
+
+          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+          if (flags.value.includes('read')) {
+            const value = await charInterface.ReadValue({});
+            console.log(`Value of characteristic ${charPath}:`, value);
+          }
+
+          if (flags.value.includes('notify')) {
+            await charInterface.StartNotify();
+            console.log(`Subscribed to notifications for characteristic ${charPath}`);
+          }
+        } catch (error) {
+          console.error(`Error processing characteristic ${charPath}:`, error);
         }
       }
     } catch (error) {
