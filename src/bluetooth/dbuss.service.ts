@@ -24,66 +24,55 @@ export class BluetoothService implements OnModuleInit {
       this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
       console.log('BlueZ interface initialized successfully');
 
-      // Attempt to list devices and connect to one
-      const devices = await this.listDevices();
-      console.log('Discovered devices:', devices);
-
-      if (devices.length > 0) {
-        const firstDevice = devices[0];
-        console.log(`Attempting to connect to the first device: ${firstDevice}`);
-
-        const deviceProxy = await this.systemBus.getProxyObject('org.bluez', firstDevice);
-        const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-
-        await this.connectToDevice(deviceProperties);
-        await this.readDeviceCharacteristics(deviceProxy);
-      } else {
-        console.warn('No devices found to connect to.');
-      }
+      // Спробуємо підключитись до пристрою
+      await this.connectToFirstDevice();
     } catch (error) {
-      console.error('Failed to initialize or connect:', error);
+      console.error('Failed to initialize BlueZ interface:', error);
     }
   }
 
-  async listDevices(): Promise<string[]> {
+  async connectToFirstDevice() {
     console.log('Listing devices...');
     try {
       const objects = await this.bluez.GetManagedObjects();
       const devices = Object.keys(objects).filter((path) =>
         path.includes('/org/bluez/hci0/dev_')
       );
-      return devices;
-    } catch (error) {
-      console.error('Failed to list devices:', error);
-      return [];
-    }
-  }
+      console.log('Discovered devices:', devices);
 
-  async connectToDevice(deviceProperties): Promise<void> {
-    try {
+      if (devices.length === 0) {
+        console.warn('No devices found.');
+        return;
+      }
+
+      const devicePath = devices[0];
+      console.log('Attempting to connect to the first device:', devicePath);
+
+      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
+      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+
       console.log('Powering on device...');
-      await deviceProperties.Set('org.bluez.Device1', 'Powered', { type: 'boolean', value: true });
+      await properties.Set('org.bluez.Device1', 'Powered', new dbus.Variant('b', true));
 
       console.log('Connecting to device...');
-      await deviceProperties.Set('org.bluez.Device1', 'Connected', { type: 'boolean', value: true });
-      console.log('Device connected successfully.');
+      await properties.Set('org.bluez.Device1', 'Connected', new dbus.Variant('b', true));
+
+      console.log('Device connected. Reading characteristics...');
+      await this.readDeviceCharacteristics(deviceProxy);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
   }
 
-  async readDeviceCharacteristics(deviceProxy): Promise<void> {
+  async readDeviceCharacteristics(deviceProxy) {
+    console.log('Reading device characteristics...');
     try {
-      console.log('Reading device characteristics...');
-      const characteristics = Object.keys(await deviceProxy.GetManagedObjects())
-        .filter((path) => path.includes('/char'));
+      const gattServiceInterface = deviceProxy.getInterface('org.bluez.GattService1');
+      const characteristics = await gattServiceInterface.GetManagedObjects();
 
-      for (const charPath of characteristics) {
-        console.log(`Found characteristic: ${charPath}`);
-        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-        const value = await charProperties.Get('org.bluez.GattCharacteristic1', 'Value');
-        console.log(`Characteristic ${charPath} value:`, value);
+      for (const [path, properties] of Object.entries(characteristics)) {
+        console.log(`Path: ${path}`);
+        console.log(`Properties: ${JSON.stringify(properties)}`);
       }
     } catch (error) {
       console.error('Failed to read device characteristics:', error);
