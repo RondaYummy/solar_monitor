@@ -110,6 +110,7 @@ export class BluetoothService implements OnModuleInit {
         }
 
         await this.connectToDevice(peripheral);
+        await this.stopScanning(); // TODO remove
 
         // Слухач на відключення та підключення
         this.logger.log('Вішаємо лістенери на дісконект та конект....');
@@ -194,7 +195,6 @@ export class BluetoothService implements OnModuleInit {
         this.connectedDevices.delete(deviceId);
         this.connectedDevicesInfo();
       } else {
-        this.logger.log(peripheral.state + ' discoverServicesAsync');
         peripheral.discoverServices();
         const services = await peripheral.discoverServicesAsync();
 
@@ -257,6 +257,7 @@ export class BluetoothService implements OnModuleInit {
         attempts++;
         try {
           await this.connectToDevice(peripheral);
+          await this.stopScanning(); // TODO remove
           this.logger.log(`[${deviceId}] \x1b[34mDevice \x1b[31m${deviceId} \x1b[34mreconnected after ${attempts} attempt(s).`);
         } catch (error) {
           this.logger.error(`[${deviceId}] Reconnect attempt ${attempts} failed for ${deviceId}: ${error.message}`);
