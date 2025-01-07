@@ -62,7 +62,7 @@ export class BluetoothService implements OnModuleInit {
       this.log('Reading battery level...', devicePath);
       await this.readAllCharacteristics(deviceProxy, objects);
 
-      await this.readBatteryLevel(deviceProxy, devicePath);
+      await this.readBatteryLevelUsingJKProtocol(devicePath);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -248,7 +248,7 @@ export class BluetoothService implements OnModuleInit {
     this.logger.log(deviceInfo, message, ...optionalParams);
   }
 
-  async readBatteryLevel(deviceProxy: any, devicePath: string): Promise<void> {
+  async readBatteryLevelUsingJKProtocol(devicePath: string): Promise<void> {
     try {
       const objects = await this.bluez.GetManagedObjects();
 
@@ -262,19 +262,26 @@ export class BluetoothService implements OnModuleInit {
         const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
 
         const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
-        if (uuid.value === '00002a19-0000-1000-8000-00805f9b34fb') {
-          // Зчитуємо рівень заряду
+        if (uuid.value === '<replace-with-actual-jk-protocol-uuid>') {
+          // Використання JK-BMS протоколу для зчитування рівня заряду
+          const command = Buffer.from([
+            0x4E, 0x57, 0x00, 0x13, 0x00, 0x00, 0x00, 0x00, 0x06, 0x03,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x68, 0x00, 0x00, 0x01, 0x29,
+          ]);
+
           const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+          await charInterface.WriteValue(command, {});
           const value = await charInterface.ReadValue({});
-          const batteryLevel = this.bufferToInt(Buffer.from(value));
-          this.log(`Battery level: ${batteryLevel}%`, devicePath);
+
+          const batteryLevel = value[1]; // SOC зберігається у другому байті
+          this.log(`Battery level (SOC): ${batteryLevel}%`, devicePath);
           return;
         }
       }
 
-      this.log('Battery level characteristic not found.', devicePath);
+      this.log('JK-BMS battery level characteristic not found.', devicePath);
     } catch (error) {
-      this.log('Failed to read battery level:', devicePath, error);
+      this.log('Failed to read battery level using JK-BMS protocol:', devicePath, error);
     }
   }
 }
