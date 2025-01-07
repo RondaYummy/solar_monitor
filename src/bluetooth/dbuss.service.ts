@@ -123,15 +123,17 @@ export class BluetoothService implements OnModuleInit {
           console.log(`Inspecting characteristic: ${charPath}`);
           try {
             const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-            const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-            const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
 
-            if (!flags.value.includes('read') && !flags.value.includes('notify')) {
-              console.warn(`Characteristic ${charPath} does not support read or notify.`);
+            // Перевірка на наявність методу StartNotify
+            if (!charInterface || typeof charInterface.StartNotify !== 'function') {
+              console.warn(`Characteristic ${charPath} does not support notifications.`);
               continue;
             }
 
-            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+            const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+            const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
               console.log(`Value of characteristic ${charPath}:`, this.bufferToHex(value));
@@ -140,9 +142,7 @@ export class BluetoothService implements OnModuleInit {
             if (flags.value.includes('notify')) {
               await charInterface.StartNotify();
               console.log(`Subscribed to notifications for characteristic ${charPath}`);
-
-              // Додаємо підписку на PropertiesChanged
-              this.subscribeToNotifications(charInterface, charPath);
+              this.subscribeToNotifications(charPath, charInterface);
             }
           } catch (error) {
             console.error(`Error processing characteristic ${charPath}:`, error);
@@ -156,9 +156,6 @@ export class BluetoothService implements OnModuleInit {
 
   private async subscribeToNotifications(charPath: string, charInterface: any) {
     try {
-      await charInterface.StartNotify();
-      console.log(`Subscribed to notifications for characteristic ${charPath}`);
-
       charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
         if (changed.Value) {
           console.log(
