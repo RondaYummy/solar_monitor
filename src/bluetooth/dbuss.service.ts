@@ -24,7 +24,7 @@ export class BluetoothService implements OnModuleInit {
       this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
       console.log('BlueZ interface initialized successfully');
 
-      // Спробуємо підключитись до пристрою
+      // Спроба підключення до першого пристрою
       await this.connectToFirstDevice();
     } catch (error) {
       console.error('Failed to initialize BlueZ interface:', error);
@@ -55,17 +55,12 @@ export class BluetoothService implements OnModuleInit {
       const allProperties = await properties.GetAll('org.bluez.Device1');
       console.log('Device properties:', allProperties);
 
-      if (!allProperties.Powered) {
-        console.warn("Device doesn't support 'Powered' property. Skipping power on.");
-      } else {
-        console.log('Powering on device...');
-        await properties.Set('org.bluez.Device1', 'Powered', new dbus.Variant('b', true));
-      }
+      console.log('Connecting to device using Connect method...');
+      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+      await deviceInterface.Connect();
+      console.log('Device connected successfully.');
 
-      console.log('Connecting to device...');
-      await properties.Set('org.bluez.Device1', 'Connected', new dbus.Variant('b', true));
-
-      console.log('Device connected. Reading characteristics...');
+      console.log('Reading characteristics...');
       await this.readDeviceCharacteristics(deviceProxy);
     } catch (error) {
       console.error('Failed to connect to device:', error);
