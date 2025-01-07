@@ -56,7 +56,7 @@ export class BluetoothService implements OnModuleInit {
       console.log('Device connected successfully.');
 
       console.log('Reading characteristics...');
-      await this.readDeviceCharacteristics(deviceProxy);
+      await this.readDeviceCharacteristics(deviceProxy, objects);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -82,14 +82,17 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async readDeviceCharacteristics(deviceProxy) {
+  async readDeviceCharacteristics(deviceProxy, objects) {
     console.log('Reading device characteristics...');
     try {
-      // Отримання всіх об'єктів пристрою
-      const objects = await this.bluez.GetManagedObjects();
-      console.log('Fetched ManagedObjects:', objects);
+      const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+      const servicesResolved = await deviceProperties.Get('org.bluez.Device1', 'ServicesResolved');
 
-      // Пошук GATT-сервісів у межах цього пристрою
+      if (!servicesResolved.value) {
+        console.warn('Services are not resolved yet.');
+        return;
+      }
+
       const services = Object.keys(objects).filter((path) =>
         path.startsWith(deviceProxy.path) && path.includes('service')
       );
@@ -100,28 +103,29 @@ export class BluetoothService implements OnModuleInit {
         return;
       }
 
-      // Ітерація по сервісах і виведення їхніх UUID
       for (const servicePath of services) {
+        if (!objects[servicePath]['org.bluez.GattService1']) continue;
+
         console.log(`Inspecting service: ${servicePath}`);
         const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
         const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
-
         const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
         console.log(`Service ${servicePath} UUID: ${uuid.value}`);
 
-        // Пошук характеристик у цьому сервісі
         const characteristics = Object.keys(objects).filter((path) =>
           path.startsWith(servicePath) && path.includes('char')
         );
         console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
 
         for (const charPath of characteristics) {
+          if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
+
           console.log(`Inspecting characteristic: ${charPath}`);
           try {
             const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
             const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-
             const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+
             if (!flags.value.includes('read') && !flags.value.includes('notify')) {
               console.warn(`Characteristic ${charPath} does not support read or notify.`);
               continue;
@@ -146,5 +150,4 @@ export class BluetoothService implements OnModuleInit {
       console.error('Failed to read device characteristics:', error);
     }
   }
-
 }
