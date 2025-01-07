@@ -49,21 +49,36 @@ export class BluetoothService implements OnModuleInit {
       console.log('Attempting to connect to the first device:', devicePath);
 
       const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-
-      console.log('Fetching all properties for the device...');
-      const allProperties = await properties.GetAll('org.bluez.Device1');
-      console.log('Device properties:', allProperties);
-
-      console.log('Connecting to device using Connect method...');
       const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
-      await deviceInterface.Connect();
+
+      console.log('Connecting to device using retry logic...');
+      await this.connectWithRetry(deviceInterface, 3, 2000);
       console.log('Device connected successfully.');
 
       console.log('Reading characteristics...');
       await this.readDeviceCharacteristics(deviceProxy);
     } catch (error) {
       console.error('Failed to connect to device:', error);
+    }
+  }
+
+  async connectWithRetry(deviceInterface, retries = 3, delay = 2000) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`Attempt ${attempt} to connect to the device...`);
+        await deviceInterface.Connect();
+        console.log('Device connected successfully.');
+        return;
+      } catch (error) {
+        console.error(`Connection attempt ${attempt} failed:`, error);
+        if (attempt < retries) {
+          console.log(`Retrying in ${delay / 1000} seconds...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          console.error('All connection attempts failed.');
+          throw error;
+        }
+      }
     }
   }
 
