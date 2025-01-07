@@ -136,7 +136,7 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              console.log(`Value of characteristic ${charPath}:`, this.bufferToHex(value));
+              console.log(`Value of characteristic ${charPath}:`, this.bufferToUtf8(value));
             }
 
             if (flags.value.includes('notify')) {
@@ -160,7 +160,7 @@ export class BluetoothService implements OnModuleInit {
         if (changed.Value) {
           console.log(
             `Notification from ${charPath}:`,
-            this.bufferToHex(changed.Value.value)
+            this.bufferToUtf8(changed.Value.value)
           );
         }
       });
