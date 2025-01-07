@@ -85,23 +85,56 @@ export class BluetoothService implements OnModuleInit {
   async readDeviceCharacteristics(deviceProxy) {
     console.log('Reading device characteristics...');
     try {
-      const interfaces = Object.keys(deviceProxy.interfaces);
-      console.log('Available interfaces:', interfaces);
+      // Отримання всіх об'єктів пристрою
+      const objects = await this.bluez.GetManagedObjects();
+      console.log('Fetched ManagedObjects:', objects);
 
-      if (!interfaces.includes('org.bluez.GattService1')) {
-        console.warn('GattService1 interface not found for this device.');
+      // Пошук GATT-сервісів у межах цього пристрою
+      const services = Object.keys(objects).filter((path) =>
+        path.startsWith(deviceProxy.path) && path.includes('service')
+      );
+      console.log('Discovered GATT services:', services);
+
+      if (services.length === 0) {
+        console.warn('No GATT services found for this device.');
         return;
       }
 
-      const gattServiceInterface = deviceProxy.getInterface('org.bluez.GattService1');
-      const characteristics = await gattServiceInterface.GetManagedObjects();
+      // Ітерація по сервісах і виведення їхніх UUID
+      for (const servicePath of services) {
+        console.log(`Inspecting service: ${servicePath}`);
+        const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
+        const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
 
-      for (const [path, properties] of Object.entries(characteristics)) {
-        console.log(`Path: ${path}`);
-        console.log(`Properties: ${JSON.stringify(properties)}`);
+        const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
+        console.log(`Service ${servicePath} UUID: ${uuid.value}`);
+
+        // Пошук характеристик у цьому сервісі
+        const characteristics = Object.keys(objects).filter((path) =>
+          path.startsWith(servicePath) && path.includes('char')
+        );
+        console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
+
+        for (const charPath of characteristics) {
+          const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+          const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+
+          const charUuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+          console.log(`Characteristic ${charPath} UUID: ${charUuid.value}`);
+
+          // Спроба зчитування значення характеристики
+          if (charProxy.interfaces['org.bluez.GattCharacteristic1']) {
+            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+            const value = await charInterface.ReadValue({});
+            console.log(`Value of characteristic ${charUuid.value}:`, value);
+          } else {
+            console.warn(`Characteristic ${charPath} does not support reading.`);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to read device characteristics:', error);
     }
   }
+
 }
