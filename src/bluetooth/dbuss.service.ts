@@ -122,13 +122,33 @@ export class BluetoothService implements OnModuleInit {
           const charUuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
           console.log(`Characteristic ${charPath} UUID: ${charUuid.value}`);
 
-          // Спроба зчитування значення характеристики
-          if (charProxy.interfaces['org.bluez.GattCharacteristic1']) {
-            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-            const value = await charInterface.ReadValue({});
-            console.log(`Value of characteristic ${charUuid.value}:`, value);
+          const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+          console.log(`Flags for characteristic ${charPath}:`, flags.value);
+
+          if (flags.value.includes('read')) {
+            try {
+              const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+              const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+              if (!flags.value.includes('read')) {
+                console.warn(`Characteristic ${charPath} does not support reading.`);
+                continue;
+              }
+              const value = await charInterface.ReadValue({});
+              console.log(`Value of characteristic ${charUuid.value}:`, value);
+            } catch (readError) {
+              console.error(`Failed to read characteristic ${charPath}:`, readError);
+            }
+          } else if (flags.value.includes('notify')) {
+            console.log(`Subscribing to notifications for characteristic ${charPath}`);
+            try {
+              const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+              await charInterface.StartNotify();
+            } catch (notifyError) {
+              console.error(`Failed to subscribe to notifications for ${charPath}:`, notifyError);
+            }
           } else {
-            console.warn(`Characteristic ${charPath} does not support reading.`);
+            console.warn(`Characteristic ${charPath} does not support read or notify.`);
           }
         }
       }
