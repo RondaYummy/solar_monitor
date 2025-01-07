@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import dbus from 'dbus-next';
+import * as dbus from 'dbus-next';
 
 @Injectable()
 export class BluetoothService {
