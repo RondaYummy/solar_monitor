@@ -185,7 +185,7 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              console.log(`Value of characteristic ${charPath} (UUID: ${uuid.value}):`, this.bufferToHex(value));
+              console.log(`Value of characteristic ${charPath} (UUID: ${uuid.value}):`, `HEX: ${this.bufferToHex(value)}`, `UTF-8:${this.bufferToUtf8(value)}`, `Int: ${this.bufferToInt(value)}`);
             }
           } catch (error) {
             console.error(`Error processing characteristic ${charPath}:`, error);
