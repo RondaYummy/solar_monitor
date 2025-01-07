@@ -134,12 +134,15 @@ export class BluetoothService implements OnModuleInit {
             const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              console.log(`Value of characteristic ${charPath}:`, value);
+              console.log(`Value of characteristic ${charPath}:`, this.bufferToHex(value));
             }
 
             if (flags.value.includes('notify')) {
               await charInterface.StartNotify();
               console.log(`Subscribed to notifications for characteristic ${charPath}`);
+
+              // Додаємо підписку на PropertiesChanged
+              this.subscribeToNotifications(charInterface, charPath);
             }
           } catch (error) {
             console.error(`Error processing characteristic ${charPath}:`, error);
@@ -149,5 +152,31 @@ export class BluetoothService implements OnModuleInit {
     } catch (error) {
       console.error('Failed to read device characteristics:', error);
     }
+  }
+
+  private async subscribeToNotifications(charPath: string, charInterface: any) {
+    try {
+      await charInterface.StartNotify();
+      console.log(`Subscribed to notifications for characteristic ${charPath}`);
+
+      charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
+        if (changed.Value) {
+          console.log(
+            `Notification from ${charPath}:`,
+            this.bufferToHex(changed.Value.value)
+          );
+        }
+      });
+    } catch (error) {
+      console.error(`Failed to subscribe to notifications for ${charPath}:`, error);
+    }
+  }
+
+  private bufferToHex(buffer: Buffer): string {
+    return buffer.toString('hex').toUpperCase();
+  }
+
+  private bufferToUtf8(buffer: Buffer): string {
+    return buffer.toString('utf8');
   }
 }
