@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as dbus from 'dbus-next';
 
 @Injectable()
-export class BluetoothService {
+export class BluetoothService implements OnModuleInit {
   private systemBus;
   private bluez;
 
@@ -14,6 +14,17 @@ export class BluetoothService {
       }
     } catch (error) {
       console.error('DBus initialization error:', error);
+    }
+  }
+
+  async onModuleInit() {
+    console.log('Initializing BlueZ interface...');
+    try {
+      const bluez = await this.systemBus.getProxyObject('org.bluez', '/');
+      this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
+      console.log('BlueZ interface initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize BlueZ interface:', error);
     }
   }
 
