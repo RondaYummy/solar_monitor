@@ -201,8 +201,17 @@ export class BluetoothService implements OnModuleInit {
         for (const service of services) {
           this.logger.log(`[${deviceId}] \x1b[31mservice`, service,);
 
+          if (peripheral._state !== 'connected') {
+            this.logger.warn(`[${deviceId}] Device is not connected. Skipping characteristic discovery.`);
+            return;
+          }
           const characteristics = await service.discoverCharacteristicsAsync();
           for (const characteristic of characteristics) {
+            if (characteristic.properties.length === 0) {
+              this.logger.warn(`[${deviceId}] Characteristic ${characteristic.uuid} has no properties.`);
+              continue;
+            }
+
             this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
 
             // Якщо характеристика підтримує читання
