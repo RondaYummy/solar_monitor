@@ -57,6 +57,9 @@ export class BluetoothService implements OnModuleInit {
 
       console.log('Reading characteristics...');
       await this.readDeviceCharacteristics(deviceProxy, objects);
+
+      console.log('Reading battery level...');
+      await this.readBatteryLevel(deviceProxy, objects);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -98,11 +101,6 @@ export class BluetoothService implements OnModuleInit {
       );
       console.log('Discovered GATT services:', services);
 
-      if (services.length === 0) {
-        console.warn('No GATT services found for this device.');
-        return;
-      }
-
       for (const servicePath of services) {
         if (!objects[servicePath]['org.bluez.GattService1']) continue;
 
@@ -124,12 +122,6 @@ export class BluetoothService implements OnModuleInit {
           try {
             const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
             const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-
-            // Перевірка на наявність методу StartNotify
-            if (!charInterface || typeof charInterface.StartNotify !== 'function') {
-              console.warn(`Characteristic ${charPath} does not support notifications.`);
-              continue;
-            }
 
             const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
             const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
@@ -154,13 +146,51 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
+  async readBatteryLevel(deviceProxy, objects) {
+    console.log('Reading Battery Level...');
+    try {
+      const batteryServicePath = Object.keys(objects).find(
+        (path) =>
+          path.startsWith(deviceProxy.path) &&
+          objects[path]['org.bluez.GattService1'] &&
+          objects[path]['org.freedesktop.DBus.Properties'].UUID ===
+          '0000180f-0000-1000-8000-00805f9b34fb'
+      );
+
+      if (!batteryServicePath) {
+        console.warn('Battery Service not found.');
+        return;
+      }
+
+      const batteryCharPath = Object.keys(objects).find(
+        (path) =>
+          path.startsWith(batteryServicePath) &&
+          objects[path]['org.bluez.GattCharacteristic1'] &&
+          objects[path]['org.freedesktop.DBus.Properties'].UUID ===
+          '00002a19-0000-1000-8000-00805f9b34fb'
+      );
+
+      if (!batteryCharPath) {
+        console.warn('Battery Level Characteristic not found.');
+        return;
+      }
+
+      const charProxy = await this.systemBus.getProxyObject('org.bluez', batteryCharPath);
+      const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+      const value = await charInterface.ReadValue({});
+      console.log(`Battery Level: ${this.bufferToInt(value)}%`);
+    } catch (error) {
+      console.error('Failed to read battery level:', error);
+    }
+  }
+
   private async subscribeToNotifications(charPath: string, charInterface: any) {
     try {
       charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
         if (changed.Value) {
           console.log(
             `Notification from ${charPath}:`,
-            this.bufferToUtf8(changed.Value.value)
+            this.bufferToUtf8(Buffer.from(changed.Value.value))
           );
         }
       });
@@ -175,5 +205,9 @@ export class BluetoothService implements OnModuleInit {
 
   private bufferToUtf8(buffer: Buffer): string {
     return buffer.toString('utf8');
+  }
+
+  private bufferToInt(buffer: Buffer): number {
+    return buffer.readUInt8(0);
   }
 }
