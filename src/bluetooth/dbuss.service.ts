@@ -51,8 +51,16 @@ export class BluetoothService implements OnModuleInit {
       const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
       const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
 
-      console.log('Powering on device...');
-      await properties.Set('org.bluez.Device1', 'Powered', new dbus.Variant('b', true));
+      console.log('Fetching all properties for the device...');
+      const allProperties = await properties.GetAll('org.bluez.Device1');
+      console.log('Device properties:', allProperties);
+
+      if (!allProperties.Powered) {
+        console.warn("Device doesn't support 'Powered' property. Skipping power on.");
+      } else {
+        console.log('Powering on device...');
+        await properties.Set('org.bluez.Device1', 'Powered', new dbus.Variant('b', true));
+      }
 
       console.log('Connecting to device...');
       await properties.Set('org.bluez.Device1', 'Connected', new dbus.Variant('b', true));
@@ -67,6 +75,14 @@ export class BluetoothService implements OnModuleInit {
   async readDeviceCharacteristics(deviceProxy) {
     console.log('Reading device characteristics...');
     try {
+      const interfaces = Object.keys(deviceProxy.interfaces);
+      console.log('Available interfaces:', interfaces);
+
+      if (!interfaces.includes('org.bluez.GattService1')) {
+        console.warn('GattService1 interface not found for this device.');
+        return;
+      }
+
       const gattServiceInterface = deviceProxy.getInterface('org.bluez.GattService1');
       const characteristics = await gattServiceInterface.GetManagedObjects();
 
