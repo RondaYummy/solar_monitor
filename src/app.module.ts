@@ -19,6 +19,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, GattService],
+  providers: [AppService, BluetoothService],
 })
 export class AppModule { }
