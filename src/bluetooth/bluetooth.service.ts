@@ -193,23 +193,25 @@ export class BluetoothService implements OnModuleInit {
     for (const [deviceId, peripheral] of this.connectedDevices.entries()) {
       if (peripheral.state !== 'connected') {
         this.connectedDevices.delete(deviceId);
-        this.logger.warn(`[${deviceId}] Device is not connected. Skipping characteristic discovery.`);
+        this.logger.warn(`\x1b[31m[${deviceId}]\x1b[32m Device is not connected. Skipping characteristic discovery.`);
         this.connectedDevicesInfo();
       } else {
-        peripheral.discoverServices();
+        this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovering services...`);
         const services = await peripheral.discoverServicesAsync();
+        this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Discovered ${services.length} service(s).`);
 
         for (const service of services) {
           this.logger.log(`[${deviceId}] \x1b[31mservice`, service,);
 
           const characteristics = await service.discoverCharacteristicsAsync();
+
           for (const characteristic of characteristics) {
-            if (characteristic.properties.length === 0) {
-              this.logger.warn(`[${deviceId}] Characteristic ${characteristic.uuid} has no properties.`);
+            if (!characteristics || characteristics.length === 0) {
+              this.logger.warn(`\x1b[31m[${deviceId}]\x1b[32m Service ${service.uuid} does not have any characteristics.`);
               continue;
             }
 
-            this.logger.log(`\x1b[31m[${deviceId}]\x1b[32m Service: ${service.uuid}, Features: ${characteristics.length}`);
+            this.logger.log(`[${deviceId}] Found characteristic ${characteristic.uuid} with properties: ${characteristic.properties.join(', ')}`);
 
             // Якщо характеристика підтримує читання
             if (characteristic.properties.includes('read')) {
