@@ -1,8 +1,9 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as dbus from 'dbus-next';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
+  private readonly logger = new Logger(BluetoothService.name);
   private systemBus;
   private bluez;
 
@@ -17,37 +18,31 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  private async log(message: string, devicePath: string, ...optionalParams: any[]) {
-    const deviceName = await this.getDeviceName(devicePath);
-    const deviceInfo = deviceName ? `[${deviceName}]` : '[Unknown Device]';
-    console.log(deviceInfo, message, ...optionalParams);
-  }
-
   async onModuleInit() {
-    this.log('Initializing BlueZ interface...', '');
+    console.log('Initializing BlueZ interface...');
     try {
       const bluez = await this.systemBus.getProxyObject('org.bluez', '/');
       this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
-      this.log('BlueZ interface initialized successfully', '');
+      console.log('BlueZ interface initialized successfully');
 
       // Спроба підключення до першого пристрою
       await this.connectToFirstDevice();
     } catch (error) {
-      this.log('Failed to initialize BlueZ interface:', '', error);
+      console.error('Failed to initialize BlueZ interface:', error);
     }
   }
 
   async connectToFirstDevice() {
-    this.log('Listing devices...', '');
+    console.log('Listing devices...');
     try {
       const objects = await this.bluez.GetManagedObjects();
       const devices = Object.keys(objects).filter((path) =>
         path.includes('/org/bluez/hci0/dev_')
       );
-      this.log('Discovered devices:', '', devices);
+      console.log('Discovered devices:', devices);
 
       if (devices.length === 0) {
-        this.log('No devices found.', '');
+        console.warn('No devices found.');
         return;
       }
 
@@ -62,12 +57,12 @@ export class BluetoothService implements OnModuleInit {
       this.log('Device connected successfully.', devicePath);
 
       this.log('Reading characteristics...', devicePath);
-      await this.readDeviceCharacteristics(deviceProxy, objects, devicePath);
+      await this.readDeviceCharacteristics(deviceProxy, objects);
 
       this.log('Reading battery level...', devicePath);
-      await this.readAllCharacteristics(deviceProxy, objects, devicePath);
+      await this.readAllCharacteristics(deviceProxy, objects);
     } catch (error) {
-      this.log('Failed to connect to device:', '', error);
+      console.error('Failed to connect to device:', error);
     }
   }
 
@@ -91,40 +86,40 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async readDeviceCharacteristics(deviceProxy, objects, devicePath: string) {
-    this.log('Reading device characteristics...', devicePath);
+  async readDeviceCharacteristics(deviceProxy, objects) {
+    console.log('Reading device characteristics...');
     try {
       const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
       const servicesResolved = await deviceProperties.Get('org.bluez.Device1', 'ServicesResolved');
 
       if (!servicesResolved.value) {
-        this.log('Services are not resolved yet.', devicePath);
+        console.warn('Services are not resolved yet.');
         return;
       }
 
       const services = Object.keys(objects).filter((path) =>
         path.startsWith(deviceProxy.path) && path.includes('service')
       );
-      this.log('Discovered GATT services:', devicePath, services);
+      console.log('Discovered GATT services:', services);
 
       for (const servicePath of services) {
         if (!objects[servicePath]['org.bluez.GattService1']) continue;
 
-        this.log(`Inspecting service: ${servicePath}`, devicePath);
+        console.log(`Inspecting service: ${servicePath}`);
         const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
         const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
         const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
-        this.log(`Service ${servicePath} UUID: ${uuid.value}`, devicePath);
+        console.log(`Service ${servicePath} UUID: ${uuid.value}`);
 
         const characteristics = Object.keys(objects).filter((path) =>
           path.startsWith(servicePath) && path.includes('char')
         );
-        this.log(`Discovered characteristics for service ${servicePath}:`, devicePath, characteristics);
+        console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
 
         for (const charPath of characteristics) {
           if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
 
-          this.log(`Inspecting characteristic: ${charPath}`, devicePath);
+          console.log(`Inspecting characteristic: ${charPath}`);
           try {
             const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
             const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
@@ -134,32 +129,120 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              this.log(`Value of characteristic ${charPath}:`, devicePath, value);
+              console.log(`Value of characteristic ${charPath}:`, this.bufferToUtf8(value));
             }
 
             if (flags.value.includes('notify')) {
               await charInterface.StartNotify();
-              this.log(`Subscribed to notifications for characteristic ${charPath}`, devicePath);
+              console.log(`Subscribed to notifications for characteristic ${charPath}`);
+              this.subscribeToNotifications(charPath, charInterface);
             }
           } catch (error) {
-            this.log(`Error processing characteristic ${charPath}:`, devicePath, error);
+            console.error(`Error processing characteristic ${charPath}:`, error);
           }
         }
       }
     } catch (error) {
-      this.log('Failed to read device characteristics:', devicePath, error);
+      console.error('Failed to read device characteristics:', error);
     }
+  }
+
+  async readAllCharacteristics(deviceProxy, objects) {
+    console.log('Reading all characteristics...');
+    try {
+      const services = Object.keys(objects).filter((path) =>
+        path.startsWith(deviceProxy.path) && path.includes('service')
+      );
+      console.log('Discovered GATT services:', services);
+
+      for (const servicePath of services) {
+        if (!objects[servicePath]['org.bluez.GattService1']) continue;
+
+        console.log(`Inspecting service: ${servicePath}`);
+        const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
+        const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
+        const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
+        console.log(`Service ${servicePath} UUID: ${uuid.value}`);
+
+        const characteristics = Object.keys(objects).filter((path) =>
+          path.startsWith(servicePath) && path.includes('char')
+        );
+        console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
+
+        for (const charPath of characteristics) {
+          if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
+
+          console.log(`Inspecting characteristic: ${charPath}`);
+          try {
+            const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+            const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+            const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+            console.log(`Characteristic ${charPath} UUID: ${uuid.value}`);
+
+            const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+            console.log(`Flags for characteristic ${charPath}:`, flags.value);
+
+            if (flags.value.includes('read')) {
+              const value = await charInterface.ReadValue({});
+              console.log(`Value of characteristic ${charPath} (UUID: ${uuid.value}):`, `HEX: ${this.bufferToHex(value)}`, `UTF-8:${this.bufferToUtf8(value)}`, `Int: ${this.bufferToInt(value)}`);
+            }
+          } catch (error) {
+            console.error(`Error processing characteristic ${charPath}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to read all characteristics:', error);
+    }
+  }
+
+  private async subscribeToNotifications(charPath: string, charInterface: any) {
+    try {
+      charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
+        if (changed.Value) {
+          console.log(
+            `Notification from ${charPath}:`,
+            this.bufferToUtf8(Buffer.from(changed.Value.value))
+          );
+        }
+      });
+    } catch (error) {
+      console.error(`Failed to subscribe to notifications for ${charPath}:`, error);
+    }
+  }
+
+  private bufferToHex(buffer: Buffer): string {
+    return buffer.toString('hex').toUpperCase();
+  }
+
+  private bufferToUtf8(buffer: Buffer): string {
+    return buffer.toString('utf8');
+  }
+
+  private bufferToInt(buffer: Buffer): number {
+    return buffer.readUInt8(0);
   }
 
   async getDeviceName(devicePath: string): Promise<string | null> {
     try {
       const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
       const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+
+      // Отримання значення властивості `Name`
       const name = await deviceProperties.Get('org.bluez.Device1', 'Name');
+      console.log(`Device name for ${devicePath}: ${name.value}`);
       return name.value;
     } catch (error) {
       console.error(`Failed to get device name for ${devicePath}:`, error);
       return null;
     }
+  }
+
+  private async log(message: string, devicePath: string, ...optionalParams: any[]) {
+    const deviceName = await this.getDeviceName(devicePath);
+    const deviceInfo = deviceName ? `[${deviceName}]` : '[Unknown Device]';
+    this.logger.log(deviceInfo, message, ...optionalParams);
   }
 }
