@@ -193,6 +193,7 @@ export class BluetoothService implements OnModuleInit {
     for (const [deviceId, peripheral] of this.connectedDevices.entries()) {
       if (peripheral.state !== 'connected') {
         this.connectedDevices.delete(deviceId);
+        this.logger.warn(`[${deviceId}] Device is not connected. Skipping characteristic discovery.`);
         this.connectedDevicesInfo();
       } else {
         peripheral.discoverServices();
@@ -201,10 +202,6 @@ export class BluetoothService implements OnModuleInit {
         for (const service of services) {
           this.logger.log(`[${deviceId}] \x1b[31mservice`, service,);
 
-          if (peripheral._state !== 'connected') {
-            this.logger.warn(`[${deviceId}] Device is not connected. Skipping characteristic discovery.`);
-            return;
-          }
           const characteristics = await service.discoverCharacteristicsAsync();
           for (const characteristic of characteristics) {
             if (characteristic.properties.length === 0) {
