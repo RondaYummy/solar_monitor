@@ -59,7 +59,7 @@ export class BluetoothService implements OnModuleInit {
       await this.readDeviceCharacteristics(deviceProxy, objects);
 
       console.log('Reading battery level...');
-      await this.readBatteryLevel(deviceProxy, objects);
+      await this.readAllCharacteristics(deviceProxy, objects);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -146,41 +146,54 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async readBatteryLevel(deviceProxy, objects) {
-    console.log('Reading Battery Level...');
+  async readAllCharacteristics(deviceProxy, objects) {
+    console.log('Reading all characteristics...');
     try {
-      const batteryServicePath = Object.keys(objects).find(
-        (path) =>
-          path.startsWith(deviceProxy.path) &&
-          objects[path]['org.bluez.GattService1'] &&
-          objects[path]['org.freedesktop.DBus.Properties'].UUID ===
-          '0000180f-0000-1000-8000-00805f9b34fb'
+      const services = Object.keys(objects).filter((path) =>
+        path.startsWith(deviceProxy.path) && path.includes('service')
       );
+      console.log('Discovered GATT services:', services);
 
-      if (!batteryServicePath) {
-        console.warn('Battery Service not found.');
-        return;
+      for (const servicePath of services) {
+        if (!objects[servicePath]['org.bluez.GattService1']) continue;
+
+        console.log(`Inspecting service: ${servicePath}`);
+        const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
+        const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
+        const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
+        console.log(`Service ${servicePath} UUID: ${uuid.value}`);
+
+        const characteristics = Object.keys(objects).filter((path) =>
+          path.startsWith(servicePath) && path.includes('char')
+        );
+        console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
+
+        for (const charPath of characteristics) {
+          if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
+
+          console.log(`Inspecting characteristic: ${charPath}`);
+          try {
+            const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+            const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+            const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+            console.log(`Characteristic ${charPath} UUID: ${uuid.value}`);
+
+            const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+            console.log(`Flags for characteristic ${charPath}:`, flags.value);
+
+            if (flags.value.includes('read')) {
+              const value = await charInterface.ReadValue({});
+              console.log(`Value of characteristic ${charPath} (UUID: ${uuid.value}):`, this.bufferToHex(value));
+            }
+          } catch (error) {
+            console.error(`Error processing characteristic ${charPath}:`, error);
+          }
+        }
       }
-
-      const batteryCharPath = Object.keys(objects).find(
-        (path) =>
-          path.startsWith(batteryServicePath) &&
-          objects[path]['org.bluez.GattCharacteristic1'] &&
-          objects[path]['org.freedesktop.DBus.Properties'].UUID ===
-          '00002a19-0000-1000-8000-00805f9b34fb'
-      );
-
-      if (!batteryCharPath) {
-        console.warn('Battery Level Characteristic not found.');
-        return;
-      }
-
-      const charProxy = await this.systemBus.getProxyObject('org.bluez', batteryCharPath);
-      const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-      const value = await charInterface.ReadValue({});
-      console.log(`Battery Level: ${this.bufferToInt(value)}%`);
     } catch (error) {
-      console.error('Failed to read battery level:', error);
+      console.error('Failed to read all characteristics:', error);
     }
   }
 
