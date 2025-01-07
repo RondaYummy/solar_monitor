@@ -61,6 +61,8 @@ export class BluetoothService implements OnModuleInit {
 
       this.log('Reading battery level...', devicePath);
       await this.readAllCharacteristics(deviceProxy, objects);
+
+      await this.readBatteryLevel(deviceProxy, devicePath);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -244,5 +246,35 @@ export class BluetoothService implements OnModuleInit {
     const deviceName = await this.getDeviceName(devicePath);
     const deviceInfo = deviceName ? `[${deviceName}]` : '[Unknown Device]';
     this.logger.log(deviceInfo, message, ...optionalParams);
+  }
+
+  async readBatteryLevel(deviceProxy: any, devicePath: string): Promise<void> {
+    try {
+      const objects = await this.bluez.GetManagedObjects();
+
+      // Фільтруємо характеристики, пов'язані з пристроєм
+      const characteristics = Object.keys(objects).filter((path) =>
+        path.startsWith(devicePath) && path.includes('char')
+      );
+
+      for (const charPath of characteristics) {
+        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+
+        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+        if (uuid.value === '00002a19-0000-1000-8000-00805f9b34fb') {
+          // Зчитуємо рівень заряду
+          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+          const value = await charInterface.ReadValue({});
+          const batteryLevel = this.bufferToInt(Buffer.from(value));
+          this.log(`Battery level: ${batteryLevel}%`, devicePath);
+          return;
+        }
+      }
+
+      this.log('Battery level characteristic not found.', devicePath);
+    } catch (error) {
+      this.log('Failed to read battery level:', devicePath, error);
+    }
   }
 }
