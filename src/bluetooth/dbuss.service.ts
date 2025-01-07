@@ -63,6 +63,8 @@ export class BluetoothService implements OnModuleInit {
       await this.readAllCharacteristics(deviceProxy, objects);
 
       await this.readBatteryLevelUsingJKProtocol(devicePath);
+
+      await this.listCharacteristics(devicePath);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -85,6 +87,27 @@ export class BluetoothService implements OnModuleInit {
           throw error;
         }
       }
+    }
+  }
+  async listCharacteristics(devicePath: string): Promise<void> {
+    try {
+      const objects = await this.bluez.GetManagedObjects();
+
+      const characteristics = Object.keys(objects).filter((path) =>
+        path.startsWith(devicePath) && path.includes('char')
+      );
+
+      this.log(`Characteristics for device ${devicePath}:`, devicePath, characteristics);
+
+      for (const charPath of characteristics) {
+        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+
+        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+        this.log(`Characteristic UUID: ${uuid.value}, Path: ${charPath}`, devicePath);
+      }
+    } catch (error) {
+      this.log('Failed to list characteristics:', devicePath, error);
     }
   }
 
