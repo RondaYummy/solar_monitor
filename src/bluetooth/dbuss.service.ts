@@ -117,6 +117,15 @@ export class BluetoothService implements OnModuleInit {
 
           console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
+          charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
+            if (changed.Value) {
+              console.log(
+                `Notification from ${charPath}:`,
+                this.bufferToUtf8(Buffer.from(changed.Value.value))
+              );
+            }
+          });
+
           if (flags.value.includes('read')) {
             try {
               const value = await charInterface.ReadValue({});
@@ -131,21 +140,6 @@ export class BluetoothService implements OnModuleInit {
       }
     } catch (error) {
       console.error('Failed to read device characteristics:', error);
-    }
-  }
-
-  private async subscribeToNotifications(charPath: string, charInterface: any) {
-    try {
-      charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
-        if (changed.Value) {
-          console.log(
-            `Notification from ${charPath}:`,
-            this.bufferToUtf8(Buffer.from(changed.Value.value))
-          );
-        }
-      });
-    } catch (error) {
-      console.error(`Failed to subscribe to notifications for ${charPath}:`, error);
     }
   }
 
