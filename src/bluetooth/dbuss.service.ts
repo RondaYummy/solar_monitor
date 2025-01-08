@@ -59,7 +59,6 @@ export class BluetoothService implements OnModuleInit {
       this.log('Reading characteristics...', devicePath);
       await this.readDeviceCharacteristics(deviceProxy, objects);
 
-      this.log('Reading battery level...', devicePath);
       await this.readAllCharacteristics(deviceProxy, objects);
 
       await this.readBatterySOC(deviceProxy, devicePath);
@@ -302,7 +301,7 @@ export class BluetoothService implements OnModuleInit {
         // Перевірити, чи це UUID відповідає SOC (0x85)
         if (uuid.value === '00002a19-0000-1000-8000-00805f9b34fb') {
           const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-
+          this.log('Reading battery level...', devicePath);
           // Виконати запит на читання значення
           const value = await charInterface.ReadValue({});
           const soc = this.bufferToInt(Buffer.from(value));
