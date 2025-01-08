@@ -133,7 +133,7 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('notify')) {
               await charInterface.StartNotify();
-              this.log(`Subscribed to notifications for characteristic ${charPath}, charPath`);
+              this.log(`Subscribed to notifications for characteristic ${charPath}`, charPath);
               this.subscribeToNotifications(charPath, charInterface);
             }
           } catch (error) {
