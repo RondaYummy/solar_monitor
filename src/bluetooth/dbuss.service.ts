@@ -117,15 +117,25 @@ export class BluetoothService implements OnModuleInit {
 
           console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
-          charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
-            if (changed.Value) {
-              console.log(
-                `Notification from ${charPath}:`,
-                this.bufferToUtf8(Buffer.from(changed.Value.value))
-              );
+          // Підписка на нотифікації
+          if (flags.value.includes('notify')) {
+            try {
+              await charInterface.StartNotify();
+              console.log(`Subscribed to notifications for characteristic ${charPath}`);
+              charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
+                if (changed.Value) {
+                  console.log(
+                    `Notification from ${charPath}:`,
+                    this.bufferToHex(Buffer.from(changed.Value.value))
+                  );
+                }
+              });
+            } catch (notifyError) {
+              console.error(`Error enabling notifications for ${charPath}:`, notifyError);
             }
-          });
+          }
 
+          // Читання характеристик, якщо це підтримується
           if (flags.value.includes('read')) {
             try {
               const value = await charInterface.ReadValue({});
