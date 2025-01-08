@@ -47,6 +47,7 @@ export class BluetoothService implements OnModuleInit {
         // Зчитування характеристик після підключення до пристрою
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         await this.readDeviceCharacteristics(deviceProxy, objects, devicePath);
+        await this.readBatteryCellsData(deviceProxy, devicePath);
 
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`);
@@ -85,6 +86,40 @@ export class BluetoothService implements OnModuleInit {
     console.log(`Connected to device: ${devicePath}`);
   }
 
+  async readBatteryCellsData(deviceProxy: any, devicePath: string): Promise<void> {
+    try {
+      const objects = await this.bluez.GetManagedObjects();
+      const characteristics = Object.keys(objects).filter((path) =>
+        path.startsWith(devicePath) && path.includes('char')
+      );
+
+      for (const charPath of characteristics) {
+        if (!objects[charPath]['org.bluez.GattCharacteristic1']) {
+          console.warn(`Skipping characteristic ${charPath} as it lacks GattCharacteristic1 interface.`);
+          continue;
+        }
+
+        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+
+        // UUID для напруги комірок батареї (прикладний UUID)
+        if (uuid.value === 'f000ffc2-0451-4000-b000-000000000000') {
+          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+          this.log('Reading battery cell voltages...', devicePath);
+          const value = await charInterface.ReadValue({});
+          const voltages = Array.from(Buffer.from(value)).map((byte) => byte / 1000); // Конвертувати в вольти
+
+          this.log(`Battery cell voltages: ${voltages.join(' V, ')} V`, devicePath);
+          return;
+        }
+      }
+
+      this.logger.warn('Battery cell data characteristic not found.', devicePath);
+    } catch (error) {
+      this.logger.error('Failed to read battery cell data:', error);
+    }
+  }
 
   async readDeviceCharacteristics(deviceProxy, objects, devicePath) {
     const deviceName = await this.getDeviceName(devicePath);
