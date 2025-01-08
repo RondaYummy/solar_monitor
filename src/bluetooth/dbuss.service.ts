@@ -117,12 +117,23 @@ export class BluetoothService implements OnModuleInit {
 
           console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
+          if (flags.value.includes('write')) {
+            try {
+              const command = Buffer.from([0x01]); // Приклад команди
+              await charInterface.WriteValue(command, {});
+              console.log(`Sent activation command to characteristic ${charPath}`);
+            } catch (writeError) {
+              console.error(`Failed to write to characteristic ${charPath}:`, writeError);
+            }
+          }
+
           // Підписка на нотифікації
           if (flags.value.includes('notify')) {
             try {
               await charInterface.StartNotify();
               console.log(`Subscribed to notifications for characteristic ${charPath}`);
               charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
+                console.log(`PropertiesChanged event: iface=${iface}, changed=${JSON.stringify(changed)}`);
                 if (changed.Value) {
                   console.log(
                     `Notification from ${charPath}:`,
