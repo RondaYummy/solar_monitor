@@ -42,14 +42,14 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        await this.connectToDeviceWithRetries(devicePath, 10, 2000);
+        await this.connectToDeviceWithRetries(devicePath, 10, 5000);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}:`, error);
       }
     }
   }
 
-  async connectToDeviceWithRetries(devicePath: string, retries = 3, delay = 2000) {
+  async connectToDeviceWithRetries(devicePath: string, retries = 3, delay = 5000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
