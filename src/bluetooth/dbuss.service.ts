@@ -32,36 +32,29 @@ export class BluetoothService implements OnModuleInit {
   }
 
   async connectToAllDevices() {
-    console.log('Listing devices...');
-    try {
-      const objects = await this.bluez.GetManagedObjects();
-      const devices = Object.keys(objects).filter((path) =>
-        path.includes('/org/bluez/hci0/dev_')
-      );
-      console.log('Discovered devices:', devices);
+    const objects = await this.bluez.GetManagedObjects();
+    const devicePaths = Object.keys(objects).filter((path) =>
+      path.includes('/org/bluez/hci0/dev_') &&
+      !path.includes('service') &&
+      !path.includes('char') &&
+      !path.includes('desc')
+    );
 
-      if (devices.length === 0) {
-        console.warn('No devices found.');
-        return;
+    for (const devicePath of devicePaths) {
+      try {
+        await this.connectToDeviceWithRetries(devicePath, 10, 2000);
+      } catch (error) {
+        console.error(`Failed to connect to device ${devicePath}:`, error);
       }
-
-      // Асинхронно підключаємось до всіх пристроїв із повторними спробами
-      await Promise.all(
-        devices.map(async (devicePath) => {
-          console.log(`Attempting to connect to device: ${devicePath}`);
-          await this.connectToDeviceWithRetries(devicePath, objects, 10, 2000); // 10 спроб, затримка 2 сек
-        })
-      );
-    } catch (error) {
-      console.error('Failed to connect to devices:', error);
     }
   }
 
-  async connectToDeviceWithRetries(devicePath: string, objects: any, retries = 3, delay = 2000) {
+  async connectToDeviceWithRetries(devicePath: string, retries = 3, delay = 2000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
-        await this.connectToDevice(devicePath, objects);
+        await this.connectToDevice(devicePath);
+        console.log(`Successfully connected to device: ${devicePath}`);
         return;
       } catch (error) {
         console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
@@ -69,32 +62,24 @@ export class BluetoothService implements OnModuleInit {
           console.log(`Retrying in ${delay / 1000} seconds...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
-          console.error(`[Attempt ${attempt}] All connection attempts failed for device: ${devicePath}`);
+          console.error(`All attempts to connect to device ${devicePath} failed.`);
         }
       }
     }
   }
 
-  async connectToDevice(devicePath: string, objects: any) {
-    try {
-      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+  async connectToDevice(devicePath: string) {
+    const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
 
-      console.log(`Connecting to device using retry logic: ${devicePath}`);
-      await deviceInterface.Connect();
-
-      console.log(`Device connected successfully: ${devicePath}`);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log(`Reading characteristics for device: ${devicePath}`);
-      await this.readDeviceCharacteristics(deviceProxy, objects);
-
-      console.log(`Reading battery SOC for device: ${devicePath}`);
-      await this.readBatterySOC(deviceProxy, devicePath);
-    } catch (error) {
-      throw new Error(`Failed to connect to device ${devicePath}: ${error.message}`);
+    if (!deviceProxy.getInterface('org.bluez.Device1')) {
+      throw new Error(`Device at path ${devicePath} does not implement org.bluez.Device1 interface`);
     }
+
+    const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+    await deviceInterface.Connect();
+    console.log(`Connected to device: ${devicePath}`);
   }
+
 
   async readDeviceCharacteristics(deviceProxy, objects) {
     console.log('\x1b[32mReading device characteristics...');
