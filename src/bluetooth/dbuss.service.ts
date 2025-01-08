@@ -256,6 +256,11 @@ export class BluetoothService implements OnModuleInit {
       );
 
       for (const charPath of characteristics) {
+        if (!objects[charPath]['org.bluez.GattCharacteristic1']) {
+          console.warn(`Skipping characteristic ${charPath} as it lacks GattCharacteristic1 interface.`);
+          continue;
+        }
+
         const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
         const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
 
