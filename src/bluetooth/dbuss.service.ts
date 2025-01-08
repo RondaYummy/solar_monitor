@@ -25,7 +25,6 @@ export class BluetoothService implements OnModuleInit {
       this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
       console.log('BlueZ interface initialized successfully');
 
-      // Спроба підключення до першого пристрою
       await this.connectToFirstDevice();
     } catch (error) {
       console.error('Failed to initialize BlueZ interface:', error);
@@ -53,7 +52,7 @@ export class BluetoothService implements OnModuleInit {
       const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
 
       this.log('Connecting to device using retry logic...', devicePath);
-      await this.connectWithRetry(deviceInterface, devicePath, 3, 2000);
+      await this.connectWithRetry(deviceInterface, devicePath, 10, 2000);
       this.log('Device connected successfully.', devicePath);
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -118,14 +117,12 @@ export class BluetoothService implements OnModuleInit {
 
           console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
-          // Відправлення активаційної команди для JK-BMS
-          if (charUUID.value === 'f000ffc1-0451-4000-b000-000000000000') { // UUID характеристики для активації
+          if (charUUID.value === 'f000ffc1-0451-4000-b000-000000000000') {
             const activationCommand = Buffer.from([0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77]);
             await charInterface.WriteValue(activationCommand, {});
             console.log(`Activation command sent to ${charPath}`);
           }
 
-          // Підписка на нотифікації
           if (flags.value.includes('notify')) {
             try {
               await charInterface.StartNotify();
@@ -144,7 +141,6 @@ export class BluetoothService implements OnModuleInit {
             }
           }
 
-          // Читання характеристик, якщо це підтримується
           if (flags.value.includes('read')) {
             try {
               const value = await charInterface.ReadValue({});
@@ -194,29 +190,24 @@ export class BluetoothService implements OnModuleInit {
 
   async readBatterySOC(deviceProxy: any, devicePath: string): Promise<void> {
     try {
-      // Отримати список всіх характеристик пристрою
       const objects = await this.bluez.GetManagedObjects();
       const characteristics = Object.keys(objects).filter((path) =>
         path.startsWith(devicePath) && path.includes('char')
       );
 
       for (const charPath of characteristics) {
-        // Перевірити, чи характеристика підтримує інтерфейс GattCharacteristic1
         if (!objects[charPath]['org.bluez.GattCharacteristic1']) {
           console.warn(`Skipping characteristic ${charPath} as it lacks GattCharacteristic1 interface.`);
           continue;
         }
 
-        // Отримати UUID характеристики
         const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
         const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
         const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
 
-        // Перевірити, чи це UUID відповідає SOC (0x85)
         if (uuid.value === '00002a19-0000-1000-8000-00805f9b34fb') {
           const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
           this.log('Reading battery level...', devicePath);
-          // Виконати запит на читання значення
           const value = await charInterface.ReadValue({});
           const soc = this.bufferToInt(Buffer.from(value));
 
