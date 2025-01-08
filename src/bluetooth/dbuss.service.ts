@@ -128,12 +128,12 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              console.log(`\x1b[31mValue of characteristic ${charPath} | UTF-8: ${this.bufferToUtf8(value)}, HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}`);
+              this.log(`\x1b[31mValue of characteristic ${charPath} | UTF-8: ${this.bufferToUtf8(value)}, HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}`, charPath);
             }
 
             if (flags.value.includes('notify')) {
               await charInterface.StartNotify();
-              console.log(`Subscribed to notifications for characteristic ${charPath}`);
+              this.log(`Subscribed to notifications for characteristic ${charPath}, charPath`);
               this.subscribeToNotifications(charPath, charInterface);
             }
           } catch (error) {
@@ -177,10 +177,7 @@ export class BluetoothService implements OnModuleInit {
     try {
       const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
       const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-
-      // Отримання значення властивості `Name`
       const name = await deviceProperties.Get('org.bluez.Device1', 'Name');
-      console.log(`Device name for ${devicePath}: ${name.value}`);
       return name.value;
     } catch (error) {
       console.error(`Failed to get device name for ${devicePath}:`, error);
@@ -191,7 +188,7 @@ export class BluetoothService implements OnModuleInit {
   private async log(message: string, devicePath: string, ...optionalParams: any[]) {
     const deviceName = await this.getDeviceName(devicePath);
     const deviceInfo = deviceName ? `[${deviceName}]` : '[Unknown Device]';
-    this.logger.log(deviceInfo, message, ...optionalParams);
+    this.logger.log(`${deviceInfo} ${message}`, ...optionalParams);
   }
 
   async readBatteryLevel(deviceProxy: any, devicePath: string): Promise<void> {
@@ -215,7 +212,7 @@ export class BluetoothService implements OnModuleInit {
           const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
           const value = await charInterface.ReadValue({});
           const batteryLevel = this.bufferToInt(Buffer.from(value));
-          this.logger.log(`Battery level: ${batteryLevel}%`, devicePath);
+          this.log(`Battery level: ${batteryLevel}%`, devicePath);
           return;
         }
       }
@@ -253,7 +250,7 @@ export class BluetoothService implements OnModuleInit {
           const value = await charInterface.ReadValue({});
           const soc = this.bufferToInt(Buffer.from(value));
 
-          this.logger.log(`Battery SOC: ${soc}%`, devicePath);
+          this.log(`Battery SOC: ${soc}%`, devicePath);
           return;
         }
       }
