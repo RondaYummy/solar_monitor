@@ -180,10 +180,9 @@ export class BluetoothService implements OnModuleInit {
 
             const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
             const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
-            console.log(`Characteristic ${charPath} UUID: ${uuid.value}`);
 
             const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
-            console.log(`Flags for characteristic ${charPath}:`, flags.value);
+            console.log(`Characteristic ${charPath} UUID: ${uuid.value}. Flags: ${flags.value}`);
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
