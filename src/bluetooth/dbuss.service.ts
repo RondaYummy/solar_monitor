@@ -25,13 +25,13 @@ export class BluetoothService implements OnModuleInit {
       this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
       console.log('BlueZ interface initialized successfully');
 
-      await this.connectToFirstDevice();
+      await this.connectToAllDevices();
     } catch (error) {
       console.error('Failed to initialize BlueZ interface:', error);
     }
   }
 
-  async connectToFirstDevice() {
+  async connectToAllDevices() {
     console.log('Listing devices...');
     try {
       const objects = await this.bluez.GetManagedObjects();
@@ -45,43 +45,54 @@ export class BluetoothService implements OnModuleInit {
         return;
       }
 
-      const devicePath = devices[0];
-      this.log('Attempting to connect to the first device:', devicePath);
-
-      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
-
-      this.log('Connecting to device using retry logic...', devicePath);
-      await this.connectWithRetry(deviceInterface, devicePath, 10, 2000);
-      this.log('Device connected successfully.', devicePath);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      this.log('Reading characteristics...', devicePath);
-      await this.readDeviceCharacteristics(deviceProxy, objects);
-
-      await this.readBatterySOC(deviceProxy, devicePath);
+      // Асинхронно підключаємось до всіх пристроїв із повторними спробами
+      await Promise.all(
+        devices.map(async (devicePath) => {
+          console.log(`Attempting to connect to device: ${devicePath}`);
+          await this.connectToDeviceWithRetries(devicePath, objects, 10, 2000); // 10 спроб, затримка 2 сек
+        })
+      );
     } catch (error) {
-      console.error('Failed to connect to device:', error);
+      console.error('Failed to connect to devices:', error);
     }
   }
 
-  async connectWithRetry(deviceInterface, devicePath: string, retries = 3, delay = 2000) {
+  async connectToDeviceWithRetries(devicePath: string, objects: any, retries = 10, delay = 2000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        this.log(`Attempt ${attempt} to connect to the device...`, devicePath);
-        await deviceInterface.Connect();
-        this.log('Device connected successfully.', devicePath);
+        console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
+        await this.connectToDevice(devicePath, objects);
         return;
       } catch (error) {
-        this.log(`Connection attempt ${attempt} failed:`, devicePath, error);
+        console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
         if (attempt < retries) {
-          this.log(`Retrying in ${delay / 1000} seconds...`, devicePath);
+          console.log(`Retrying in ${delay / 1000} seconds...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
-          this.log('All connection attempts failed.', devicePath);
-          throw error;
+          console.error(`[Attempt ${attempt}] All connection attempts failed for device: ${devicePath}`);
         }
       }
+    }
+  }
+
+  async connectToDevice(devicePath: string, objects: any) {
+    try {
+      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
+      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+
+      console.log(`Connecting to device using retry logic: ${devicePath}`);
+      await deviceInterface.Connect();
+
+      console.log(`Device connected successfully: ${devicePath}`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      console.log(`Reading characteristics for device: ${devicePath}`);
+      await this.readDeviceCharacteristics(deviceProxy, objects);
+
+      console.log(`Reading battery SOC for device: ${devicePath}`);
+      await this.readBatterySOC(deviceProxy, devicePath);
+    } catch (error) {
+      throw new Error(`Failed to connect to device ${devicePath}: ${error.message}`);
     }
   }
 
