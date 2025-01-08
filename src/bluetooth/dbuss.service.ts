@@ -86,7 +86,7 @@ export class BluetoothService implements OnModuleInit {
   }
 
   async readDeviceCharacteristics(deviceProxy, objects) {
-    console.log('Reading device characteristics...');
+    console.log('\x1b[32mReading device characteristics...');
     try {
       const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
       const servicesResolved = await deviceProperties.Get('org.bluez.Device1', 'ServicesResolved');
