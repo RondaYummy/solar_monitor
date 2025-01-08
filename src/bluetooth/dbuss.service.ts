@@ -89,12 +89,12 @@ export class BluetoothService implements OnModuleInit {
   async readDeviceCharacteristics(deviceProxy, objects, devicePath) {
     const deviceName = await this.getDeviceName(devicePath);
 
-    console.log(`[${deviceName}] \x1b[32mReading device characteristics...`);
+    console.log(`\x1b[34m[${deviceName}]\x1b[32m \x1b[32mReading device characteristics...`);
     try {
       const services = Object.keys(objects).filter((path) =>
         path.startsWith(deviceProxy.path) && path.includes('service')
       );
-      console.log(`[${deviceName}] Discovered GATT services:`, services);
+      console.log(`\x1b[34m[${deviceName}]\x1b[32m Discovered GATT services:`, services);
 
       for (const servicePath of services) {
         if (!objects[servicePath]['org.bluez.GattService1']) continue;
@@ -102,12 +102,12 @@ export class BluetoothService implements OnModuleInit {
         const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
         const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
         const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
-        console.log(`[${deviceName}] Service ${servicePath} UUID: ${uuid.value}`);
+        console.log(`\x1b[34m[${deviceName}]\x1b[32m Service ${servicePath} UUID: ${uuid.value}`);
 
         const characteristics = Object.keys(objects).filter((path) =>
           path.startsWith(servicePath) && path.includes('char')
         );
-        console.log(`[${deviceName}] Discovered characteristics for service ${servicePath}:`, characteristics);
+        console.log(`\x1b[34m[${deviceName}]\x1b[32m Discovered characteristics for service ${servicePath}:`, characteristics);
 
         for (const charPath of characteristics) {
           if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
@@ -118,29 +118,29 @@ export class BluetoothService implements OnModuleInit {
           const charUUID = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
           const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
 
-          console.log(`[${deviceName}] Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
+          console.log(`\x1b[34m[${deviceName}]\x1b[32m Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
           if (charUUID.value === 'f000ffc1-0451-4000-b000-000000000000') {
             const activationCommand = Buffer.from([0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77]);
             await charInterface.WriteValue(activationCommand, {});
-            console.log(`[${deviceName}] Activation command sent to ${charPath}`);
+            console.log(`\x1b[34m[${deviceName}]\x1b[32m Activation command sent to ${charPath}`);
           }
 
           if (flags.value.includes('notify')) {
             try {
               await charInterface.StartNotify();
-              console.log(`[${deviceName}] Subscribed to notifications for characteristic ${charPath}`);
+              console.log(`\x1b[34m[${deviceName}]\x1b[32m Subscribed to notifications for characteristic ${charPath}`);
               charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
-                console.log(`[${deviceName}] PropertiesChanged event: iface=${iface}, changed=${JSON.stringify(changed)}`);
+                console.log(`\x1b[34m[${deviceName}]\x1b[32m PropertiesChanged event: iface=${iface}, changed=${JSON.stringify(changed)}`);
                 if (changed.Value) {
                   console.log(
-                    `[${deviceName}] \x1b[31mNotification from ${charPath}:`,
+                    `\x1b[34m[${deviceName}]\x1b[32m \x1b[31mNotification from ${charPath}:`,
                     this.bufferToHex(Buffer.from(changed.Value.value))
                   );
                 }
               });
             } catch (notifyError) {
-              console.error(`[${deviceName}] Error enabling notifications for ${charPath}:`, notifyError);
+              console.error(`\x1b[34m\x1b[34m[${deviceName}]\x1b[32m\x1b[32m Error enabling notifications for ${charPath}:`, notifyError);
             }
           }
 
@@ -148,10 +148,10 @@ export class BluetoothService implements OnModuleInit {
             try {
               const value = await charInterface.ReadValue({});
               console.log(
-                `[${deviceName}] \x1b[31mCharacteristic ${charPath} value (UUID: ${charUUID.value}) | HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}, UTF-8: ${this.bufferToUtf8(value)}`
+                `\x1b[34m\x1b[34m\x1b[34m[${deviceName}]\x1b[32m\x1b[32m \x1b[31mCharacteristic ${charPath} value (UUID: ${charUUID.value}) | HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}, UTF-8: ${this.bufferToUtf8(value)}`
               );
             } catch (readError) {
-              console.error(`[${deviceName}] Error reading characteristic ${charPath}:`, readError);
+              console.error(`\x1b[34m\x1b[34m[${deviceName}]\x1b[32m\x1b[32m Error reading characteristic ${charPath}:`, readError);
             }
           }
         }
@@ -187,7 +187,7 @@ export class BluetoothService implements OnModuleInit {
 
   private async log(message: string, devicePath: string, ...optionalParams: any[]) {
     const deviceName = await this.getDeviceName(devicePath);
-    const deviceInfo = deviceName ? `[${deviceName}]` : '[Unknown Device]';
+    const deviceInfo = deviceName ? `\x1b[34m\x1b[34m[${deviceName}]\x1b[32m\x1b[32m` : '[Unknown Device]';
     this.logger.log(`${deviceInfo} ${message}`, ...optionalParams);
   }
 
