@@ -42,9 +42,14 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        await this.connectToDeviceWithRetries(devicePath, 10, 5000);
+        await this.connectToDeviceWithRetries(devicePath, 5, 3000);
+
+        // Зчитування характеристик після підключення до пристрою
+        const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
+        await this.readDeviceCharacteristics(deviceProxy, objects);
+
       } catch (error) {
-        console.error(`Failed to connect to device ${devicePath}:`, error);
+        console.error(`Failed to connect to device ${devicePath}. Skipping...`);
       }
     }
   }
