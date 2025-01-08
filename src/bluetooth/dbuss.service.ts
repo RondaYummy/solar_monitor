@@ -128,12 +128,12 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              this.log(`\x1b[31mValue of characteristic ${charPath} | UTF-8: ${this.bufferToUtf8(value)}, HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}`, charPath);
+              console.log(`\x1b[31mValue of characteristic ${charPath} | UTF-8: ${this.bufferToUtf8(value)}, HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}`);
             }
 
             if (flags.value.includes('notify')) {
               await charInterface.StartNotify();
-              this.log(`Subscribed to notifications for characteristic ${charPath}`, charPath);
+              console.log(`Subscribed to notifications for characteristic ${charPath}`);
               this.subscribeToNotifications(charPath, charInterface);
             }
           } catch (error) {
@@ -189,37 +189,6 @@ export class BluetoothService implements OnModuleInit {
     const deviceName = await this.getDeviceName(devicePath);
     const deviceInfo = deviceName ? `[${deviceName}]` : '[Unknown Device]';
     this.logger.log(`${deviceInfo} ${message}`, ...optionalParams);
-  }
-
-  async readBatteryLevel(deviceProxy: any, devicePath: string): Promise<void> {
-    try {
-      const objects = await this.bluez.GetManagedObjects();
-      const characteristics = Object.keys(objects).filter((path) =>
-        path.startsWith(devicePath) && path.includes('char')
-      );
-
-      for (const charPath of characteristics) {
-        if (!objects[charPath]['org.bluez.GattCharacteristic1']) {
-          console.warn(`Skipping characteristic ${charPath} as it lacks GattCharacteristic1 interface.`);
-          continue;
-        }
-
-        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-
-        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
-        if (uuid.value === '00002a19-0000-1000-8000-00805f9b34fb') {
-          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-          const value = await charInterface.ReadValue({});
-          const batteryLevel = this.bufferToInt(Buffer.from(value));
-          this.log(`Battery level: ${batteryLevel}%`, devicePath);
-          return;
-        }
-      }
-      this.logger.warn('Battery level characteristic not found.', devicePath);
-    } catch (error) {
-      this.logger.error('Failed to read battery level:', error);
-    }
   }
 
   async readBatterySOC(deviceProxy: any, devicePath: string): Promise<void> {
