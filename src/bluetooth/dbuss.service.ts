@@ -126,7 +126,7 @@ export class BluetoothService implements OnModuleInit {
                 console.log(`PropertiesChanged event: iface=${iface}, changed=${JSON.stringify(changed)}`);
                 if (changed.Value) {
                   console.log(
-                    `Notification from ${charPath}:`,
+                    `\x1b[31mNotification from ${charPath}:`,
                     this.bufferToHex(Buffer.from(changed.Value.value))
                   );
                 }
