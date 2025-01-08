@@ -104,7 +104,6 @@ export class BluetoothService implements OnModuleInit {
       for (const servicePath of services) {
         if (!objects[servicePath]['org.bluez.GattService1']) continue;
 
-        console.log(`Inspecting service: ${servicePath}`);
         const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
         const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
         const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
