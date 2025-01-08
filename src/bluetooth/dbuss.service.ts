@@ -87,7 +87,7 @@ export class BluetoothService implements OnModuleInit {
 
 
   async readDeviceCharacteristics(deviceProxy, objects, devicePath) {
-    const deviceName = this.getDeviceName(devicePath);
+    const deviceName = await this.getDeviceName(devicePath);
 
     console.log(`[${deviceName}] \x1b[32mReading device characteristics...`);
     try {
