@@ -57,7 +57,7 @@ export class BluetoothService implements OnModuleInit {
   async connectToDeviceWithRetries(devicePath: string, retries = 3, delay = 5000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
+        console.log(`\x1b[33m[Attempt ${attempt}]\x1b[32m Connecting to device: ${devicePath}`);
         await this.connectToDevice(devicePath);
         console.log(`Successfully connected to device: ${devicePath}`);
         return;
