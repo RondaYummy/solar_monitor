@@ -59,8 +59,6 @@ export class BluetoothService implements OnModuleInit {
       this.log('Reading characteristics...', devicePath);
       await this.readDeviceCharacteristics(deviceProxy, objects);
 
-      await this.readAllCharacteristics(deviceProxy, objects);
-
       await this.readBatterySOC(deviceProxy, devicePath);
     } catch (error) {
       console.error('Failed to connect to device:', error);
@@ -130,7 +128,7 @@ export class BluetoothService implements OnModuleInit {
 
             if (flags.value.includes('read')) {
               const value = await charInterface.ReadValue({});
-              console.log(`Value of characteristic ${charPath}:`, this.bufferToUtf8(value));
+              console.log(`\x1b[31mValue of characteristic ${charPath} | UTF-8: ${this.bufferToUtf8(value)}, HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}`);
             }
 
             if (flags.value.includes('notify')) {
@@ -145,56 +143,6 @@ export class BluetoothService implements OnModuleInit {
       }
     } catch (error) {
       console.error('Failed to read device characteristics:', error);
-    }
-  }
-
-  async readAllCharacteristics(deviceProxy, objects) {
-    console.log('Reading all characteristics...');
-    try {
-      const services = Object.keys(objects).filter((path) =>
-        path.startsWith(deviceProxy.path) && path.includes('service')
-      );
-      console.log('Discovered GATT services:', services);
-
-      for (const servicePath of services) {
-        if (!objects[servicePath]['org.bluez.GattService1']) continue;
-
-        console.log(`Inspecting service: ${servicePath}`);
-        const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
-        const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
-        const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
-        console.log(`Service ${servicePath} UUID: ${uuid.value}`);
-
-        const characteristics = Object.keys(objects).filter((path) =>
-          path.startsWith(servicePath) && path.includes('char')
-        );
-        console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
-
-        for (const charPath of characteristics) {
-          if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
-
-          console.log(`Inspecting characteristic: ${charPath}`);
-          try {
-            const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-
-            const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-            const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
-
-            const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
-            console.log(`Characteristic ${charPath} UUID: ${uuid.value}. Flags: ${flags.value}`);
-
-            if (flags.value.includes('read')) {
-              const value = await charInterface.ReadValue({});
-              console.log(`Value of characteristic ${charPath} (UUID: ${uuid.value}):`, `HEX: ${this.bufferToHex(value)}`, `UTF-8:${this.bufferToUtf8(value)}`, `Int: ${this.bufferToInt(value)}`);
-            }
-          } catch (error) {
-            console.error(`Error processing characteristic ${charPath}:`, error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to read all characteristics:', error);
     }
   }
 
