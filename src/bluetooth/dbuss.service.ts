@@ -88,14 +88,6 @@ export class BluetoothService implements OnModuleInit {
   async readDeviceCharacteristics(deviceProxy, objects) {
     console.log('\x1b[32mReading device characteristics...');
     try {
-      const deviceProperties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-      const servicesResolved = await deviceProperties.Get('org.bluez.Device1', 'ServicesResolved');
-
-      if (!servicesResolved.value) {
-        console.warn('Services are not resolved yet.');
-        return;
-      }
-
       const services = Object.keys(objects).filter((path) =>
         path.startsWith(deviceProxy.path) && path.includes('service')
       );
@@ -117,26 +109,23 @@ export class BluetoothService implements OnModuleInit {
         for (const charPath of characteristics) {
           if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
 
-          console.log(`Inspecting characteristic: ${charPath}`);
-          try {
-            const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-            const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+          const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+          const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+          const charUUID = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+          const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
 
-            const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-            const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
+          console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
-            if (flags.value.includes('read')) {
+          if (flags.value.includes('read')) {
+            try {
               const value = await charInterface.ReadValue({});
-              console.log(`\x1b[31mValue of characteristic ${charPath} | UTF-8: ${this.bufferToUtf8(value)}, HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}`);
+              console.log(
+                `\x1b[31mCharacteristic ${charPath} value (UUID: ${charUUID.value}) | HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}, UTF-8: ${this.bufferToUtf8(value)}`
+              );
+            } catch (readError) {
+              console.error(`Error reading characteristic ${charPath}:`, readError);
             }
-
-            if (flags.value.includes('notify')) {
-              await charInterface.StartNotify();
-              console.log(`Subscribed to notifications for characteristic ${charPath}`);
-              this.subscribeToNotifications(charPath, charInterface);
-            }
-          } catch (error) {
-            console.error(`Error processing characteristic ${charPath}:`, error);
           }
         }
       }
