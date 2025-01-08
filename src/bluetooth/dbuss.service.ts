@@ -46,7 +46,7 @@ export class BluetoothService implements OnModuleInit {
 
         // Зчитування характеристик після підключення до пристрою
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-        await this.readDeviceCharacteristics(deviceProxy, objects);
+        await this.readDeviceCharacteristics(deviceProxy, objects, devicePath);
 
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`);
@@ -86,13 +86,13 @@ export class BluetoothService implements OnModuleInit {
   }
 
 
-  async readDeviceCharacteristics(deviceProxy, objects) {
-    console.log('\x1b[32mReading device characteristics...');
+  async readDeviceCharacteristics(deviceProxy, objects, devicePath) {
+    console.log(`[${this.getDeviceName(devicePath)}] \x1b[32mReading device characteristics...`);
     try {
       const services = Object.keys(objects).filter((path) =>
         path.startsWith(deviceProxy.path) && path.includes('service')
       );
-      console.log('Discovered GATT services:', services);
+      console.log(`[${this.getDeviceName(devicePath)}] Discovered GATT services:`, services);
 
       for (const servicePath of services) {
         if (!objects[servicePath]['org.bluez.GattService1']) continue;
@@ -100,12 +100,12 @@ export class BluetoothService implements OnModuleInit {
         const serviceProxy = await this.systemBus.getProxyObject('org.bluez', servicePath);
         const serviceProperties = serviceProxy.getInterface('org.freedesktop.DBus.Properties');
         const uuid = await serviceProperties.Get('org.bluez.GattService1', 'UUID');
-        console.log(`Service ${servicePath} UUID: ${uuid.value}`);
+        console.log(`[${this.getDeviceName(devicePath)}] Service ${servicePath} UUID: ${uuid.value}`);
 
         const characteristics = Object.keys(objects).filter((path) =>
           path.startsWith(servicePath) && path.includes('char')
         );
-        console.log(`Discovered characteristics for service ${servicePath}:`, characteristics);
+        console.log(`[${this.getDeviceName(devicePath)}] Discovered characteristics for service ${servicePath}:`, characteristics);
 
         for (const charPath of characteristics) {
           if (!objects[charPath]['org.bluez.GattCharacteristic1']) continue;
@@ -116,29 +116,29 @@ export class BluetoothService implements OnModuleInit {
           const charUUID = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
           const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
 
-          console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
+          console.log(`[${this.getDeviceName(devicePath)}] Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
 
           if (charUUID.value === 'f000ffc1-0451-4000-b000-000000000000') {
             const activationCommand = Buffer.from([0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77]);
             await charInterface.WriteValue(activationCommand, {});
-            console.log(`Activation command sent to ${charPath}`);
+            console.log(`[${this.getDeviceName(devicePath)}] Activation command sent to ${charPath}`);
           }
 
           if (flags.value.includes('notify')) {
             try {
               await charInterface.StartNotify();
-              console.log(`Subscribed to notifications for characteristic ${charPath}`);
+              console.log(`[${this.getDeviceName(devicePath)}] Subscribed to notifications for characteristic ${charPath}`);
               charInterface.on('PropertiesChanged', (iface, changed, invalidated) => {
-                console.log(`PropertiesChanged event: iface=${iface}, changed=${JSON.stringify(changed)}`);
+                console.log(`[${this.getDeviceName(devicePath)}] PropertiesChanged event: iface=${iface}, changed=${JSON.stringify(changed)}`);
                 if (changed.Value) {
                   console.log(
-                    `\x1b[31mNotification from ${charPath}:`,
+                    `[${this.getDeviceName(devicePath)}] \x1b[31mNotification from ${charPath}:`,
                     this.bufferToHex(Buffer.from(changed.Value.value))
                   );
                 }
               });
             } catch (notifyError) {
-              console.error(`Error enabling notifications for ${charPath}:`, notifyError);
+              console.error(`[${this.getDeviceName(devicePath)}] Error enabling notifications for ${charPath}:`, notifyError);
             }
           }
 
@@ -146,10 +146,10 @@ export class BluetoothService implements OnModuleInit {
             try {
               const value = await charInterface.ReadValue({});
               console.log(
-                `\x1b[31mCharacteristic ${charPath} value (UUID: ${charUUID.value}) | HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}, UTF-8: ${this.bufferToUtf8(value)}`
+                `[${this.getDeviceName(devicePath)}] \x1b[31mCharacteristic ${charPath} value (UUID: ${charUUID.value}) | HEX: ${this.bufferToHex(value)}, Int: ${this.bufferToInt(value)}, UTF-8: ${this.bufferToUtf8(value)}`
               );
             } catch (readError) {
-              console.error(`Error reading characteristic ${charPath}:`, readError);
+              console.error(`[${this.getDeviceName(devicePath)}] Error reading characteristic ${charPath}:`, readError);
             }
           }
         }
