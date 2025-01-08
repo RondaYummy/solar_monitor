@@ -62,7 +62,7 @@ export class BluetoothService implements OnModuleInit {
       this.log('Reading battery level...', devicePath);
       await this.readAllCharacteristics(deviceProxy, objects);
 
-      await this.readBatteryLevel(deviceProxy, devicePath);
+      await this.readBatterySOC(deviceProxy, devicePath);
     } catch (error) {
       console.error('Failed to connect to device:', error);
     }
@@ -276,6 +276,45 @@ export class BluetoothService implements OnModuleInit {
       this.logger.warn('Battery level characteristic not found.', devicePath);
     } catch (error) {
       this.logger.error('Failed to read battery level:', error);
+    }
+  }
+
+  async readBatterySOC(deviceProxy: any, devicePath: string): Promise<void> {
+    try {
+      // Отримати список всіх характеристик пристрою
+      const objects = await this.bluez.GetManagedObjects();
+      const characteristics = Object.keys(objects).filter((path) =>
+        path.startsWith(devicePath) && path.includes('char')
+      );
+
+      for (const charPath of characteristics) {
+        // Перевірити, чи характеристика підтримує інтерфейс GattCharacteristic1
+        if (!objects[charPath]['org.bluez.GattCharacteristic1']) {
+          console.warn(`Skipping characteristic ${charPath} as it lacks GattCharacteristic1 interface.`);
+          continue;
+        }
+
+        // Отримати UUID характеристики
+        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
+
+        // Перевірити, чи це UUID відповідає SOC (0x85)
+        if (uuid.value === '00002a19-0000-1000-8000-00805f9b34fb') {
+          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+          // Виконати запит на читання значення
+          const value = await charInterface.ReadValue({});
+          const soc = this.bufferToInt(Buffer.from(value));
+
+          this.logger.log(`Battery SOC: ${soc}%`, devicePath);
+          return;
+        }
+      }
+
+      this.logger.warn('Battery SOC characteristic not found.', devicePath);
+    } catch (error) {
+      this.logger.error('Failed to read battery SOC:', error);
     }
   }
 }
