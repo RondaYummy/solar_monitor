@@ -55,6 +55,7 @@ export class BluetoothService implements OnModuleInit {
       this.log('Connecting to device using retry logic...', devicePath);
       await this.connectWithRetry(deviceInterface, devicePath, 3, 2000);
       this.log('Device connected successfully.', devicePath);
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       this.log('Reading characteristics...', devicePath);
       await this.readDeviceCharacteristics(deviceProxy, objects);
@@ -116,6 +117,13 @@ export class BluetoothService implements OnModuleInit {
           const flags = await charProperties.Get('org.bluez.GattCharacteristic1', 'Flags');
 
           console.log(`Inspecting characteristic: ${charPath}, UUID: ${charUUID.value}, Flags: ${flags.value}`);
+
+          // Відправлення активаційної команди для JK-BMS
+          if (charUUID.value === 'f000ffc1-0451-4000-b000-000000000000') { // UUID характеристики для активації
+            const activationCommand = Buffer.from([0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77]);
+            await charInterface.WriteValue(activationCommand, {});
+            console.log(`Activation command sent to ${charPath}`);
+          }
 
           // Підписка на нотифікації
           if (flags.value.includes('notify')) {
