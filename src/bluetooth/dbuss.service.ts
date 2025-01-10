@@ -42,23 +42,25 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
+        console.log(`Connecting to device: ${devicePath}`);
         await this.connectToDeviceWithRetries(devicePath, 5, 3000);
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-        const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
         const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
-        if (!isConnected) {
-          console.warn(`Device ${devicePath} is not connected.`);
+
+        if (!isConnected.value) {
+          console.warn(`Device ${devicePath} is not connected. Skipping...`);
           continue;
         }
+
+        console.log(`Device ${devicePath} is connected.`);
 
         // Знайти характеристику FFE1
         const charPath = Object.keys(objects).find((path) =>
           path.startsWith(devicePath) &&
           objects[path]['org.bluez.GattCharacteristic1']?.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
         );
-        console.log(charPath);
 
         if (!charPath) {
           console.warn(`Characteristic FFE1 not found for device: ${devicePath}`);
