@@ -57,10 +57,15 @@ export class BluetoothService implements OnModuleInit {
         console.log(`Device ${devicePath} is connected.`);
 
         // Знайти характеристику FFE1
-        const charPath = Object.keys(objects).find((path) =>
-          path.startsWith(devicePath) &&
-          objects[path]['org.bluez.GattCharacteristic1']?.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
-        );
+        const charPath = Object.keys(objects).find((path) => {
+          const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
+          return (
+            path.startsWith(devicePath) &&
+            characteristic &&
+            typeof characteristic.UUID === 'string' &&
+            characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
+          );
+        });
 
         if (!charPath) {
           console.warn(`Characteristic FFE1 not found for device: ${devicePath}`);
@@ -134,7 +139,7 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async connectToDeviceWithRetries(devicePath: string, retries = 99, delay = 5000) {
+  async connectToDeviceWithRetries(devicePath: string, retries = 10, delay = 5000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
