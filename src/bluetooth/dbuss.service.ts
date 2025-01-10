@@ -44,14 +44,81 @@ export class BluetoothService implements OnModuleInit {
       try {
         await this.connectToDeviceWithRetries(devicePath, 5, 3000);
 
-        // Після підключення надсилаємо команди і налаштовуємо нотифікації
-        const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-        await this.sendCommandToBms(deviceProxy, 0x97); // Device Info Command
-        await this.sendCommandToBms(deviceProxy, 0x96); // Cell Info Command
-        await this.setupNotification(deviceProxy);
+        // Знайти характеристику FFE1
+        const charPath = Object.keys(objects).find((path) =>
+          path.startsWith(devicePath) &&
+          objects[path]['org.bluez.GattCharacteristic1']?.UUID === '0000ffe1-0000-1000-8000-00805f9b34fb'
+        );
+
+        if (!charPath) {
+          console.warn(`Characteristic FFE1 not found for device: ${devicePath}`);
+          continue;
+        }
+
+        console.log(`Found characteristic FFE1: ${charPath}`);
+
+        // Надіслати команду Device Info (0x97)
+        await this.sendCommandToBms(charPath, 0x97);
+
+        // Налаштувати нотифікації
+        await this.setupNotification(charPath);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`, error);
       }
+    }
+  }
+
+  async sendCommandToBms(charPath: string, commandType: number) {
+    const command = Buffer.from([
+      0xAA, 0x55, 0x90, 0xEB, // Header
+      commandType,            // Command (0x97 - Device Info)
+      0x00,                   // Length
+      0x00, 0x00, 0x00, 0x00, // Value
+      0x00, 0x00, 0x00, 0x00, // Padding
+      0x00, 0x00, 0x00, 0x00,
+      0x00                    // CRC
+    ]);
+
+    // Обчислення CRC
+    command[command.length - 1] = command.slice(0, -1).reduce((crc, byte) => crc + byte, 0) & 0xFF;
+
+    try {
+      const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+      const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+      await charInterface.WriteValue(command, {});
+      console.log(`Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
+    } catch (error) {
+      console.error(`Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
+    }
+  }
+
+  async setupNotification(charPath: string) {
+    try {
+      const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+      const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+      await charInterface.StartNotify();
+      console.log('Notifications started.');
+
+      charInterface.on('PropertiesChanged', (iface, changed) => {
+        if (changed.Value) {
+          const data = Buffer.from(changed.Value.value);
+          console.log('Notification received:', data.toString('hex').toUpperCase());
+          this.processBmsNotification(data);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to setup notification:', error);
+    }
+  }
+
+  processBmsNotification(data: Buffer) {
+    const startSequence = [0x55, 0xAA, 0xEB, 0x90];
+    if (data.slice(0, 4).equals(Buffer.from(startSequence))) {
+      console.log('Valid frame start detected.');
+      // Додайте обробку даних тут
+    } else {
+      console.warn('Invalid frame start.');
     }
   }
 
@@ -84,79 +151,5 @@ export class BluetoothService implements OnModuleInit {
     const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
     await deviceInterface.Connect();
     console.log(`Connected to device: ${devicePath}`);
-  }
-
-  async sendCommandToBms(deviceProxy: any, commandType: number) {
-    const command = Buffer.from([
-      0xAA, 0x55, 0x90, 0xEB, // Header
-      commandType,            // Command (0x97 - Device Info, 0x96 - Cell Info)
-      0x00,                   // Length
-      0x00, 0x00, 0x00, 0x00, // Value
-      0x00, 0x00, 0x00, 0x00, // Padding
-      0x00, 0x00, 0x00, 0x00,
-      0x00                    // CRC (потрібно обчислити)
-    ]);
-
-    // Обчислення CRC
-    command[command.length - 1] = command.slice(0, -1).reduce((crc, byte) => crc + byte, 0) & 0xFF;
-
-    try {
-      const charProxy = await this.systemBus.getProxyObject('org.bluez', deviceProxy.path);
-      if (!charProxy.getInterface('org.bluez.GattCharacteristic1')) {
-        throw new Error(`GattCharacteristic1 not found for path: ${deviceProxy.path}`);
-      }
-      const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-      await charInterface.WriteValue(command, {});
-      console.log('Command sent:', command.toString('hex').toUpperCase());
-    } catch (error) {
-      console.error('Failed to send command to BMS:', error);
-    }
-  }
-
-  async setupNotification(deviceProxy: any) {
-    try {
-      const objects = await this.bluez.GetManagedObjects();
-      const characteristics = Object.keys(objects).filter((path) =>
-        path.startsWith(deviceProxy.path) && path.includes('char')
-      );
-
-      for (const charPath of characteristics) {
-        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
-        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
-
-        if (uuid.value === '0000ffe1-0000-1000-8000-00805f9b34fb') { // UUID для нотифікацій
-          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-
-          // Увімкнути нотифікації
-          await charInterface.StartNotify();
-          console.log(`Notifications started for characteristic: ${charPath}`);
-
-          // Слухати події нотифікацій
-          charInterface.on('PropertiesChanged', (iface, changed) => {
-            if (changed.Value) {
-              const data = Buffer.from(changed.Value.value);
-              console.log('Received notification:', data.toString('hex').toUpperCase());
-              this.processBmsNotification(data);
-            }
-          });
-          return; // Зупинити цикл після налаштування нотифікацій
-        }
-      }
-
-      console.warn('Notification characteristic not found.');
-    } catch (error) {
-      console.error('Failed to setup notification:', error);
-    }
-  }
-
-  processBmsNotification(data: Buffer) {
-    const startSequence = [0x55, 0xAA, 0xEB, 0x90];
-    if (data.slice(0, 4).equals(Buffer.from(startSequence))) {
-      console.log('Valid frame start detected. Full data:', data.toString('hex').toUpperCase());
-      // Логіка обробки отриманих даних
-    } else {
-      console.warn('Invalid frame start. Data:', data.toString('hex').toUpperCase());
-    }
   }
 }
