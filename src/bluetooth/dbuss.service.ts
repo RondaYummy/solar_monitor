@@ -46,7 +46,8 @@ export class BluetoothService implements OnModuleInit {
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
-        const isConnected = await deviceInterface.Connected();
+        const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+        const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
         if (!isConnected) {
           console.warn(`Device ${devicePath} is not connected.`);
           continue;
