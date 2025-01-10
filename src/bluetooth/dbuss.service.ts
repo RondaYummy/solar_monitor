@@ -102,6 +102,9 @@ export class BluetoothService implements OnModuleInit {
 
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', deviceProxy.path);
+      if (!charProxy.getInterface('org.bluez.GattCharacteristic1')) {
+        throw new Error(`GattCharacteristic1 not found for path: ${deviceProxy.path}`);
+      }
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
       await charInterface.WriteValue(command, {});
       console.log('Command sent:', command.toString('hex').toUpperCase());
