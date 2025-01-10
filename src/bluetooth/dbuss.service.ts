@@ -44,11 +44,20 @@ export class BluetoothService implements OnModuleInit {
       try {
         await this.connectToDeviceWithRetries(devicePath, 5, 3000);
 
+        const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
+        const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+        const isConnected = await deviceInterface.Connected();
+        if (!isConnected) {
+          console.warn(`Device ${devicePath} is not connected.`);
+          continue;
+        }
+
         // Знайти характеристику FFE1
         const charPath = Object.keys(objects).find((path) =>
           path.startsWith(devicePath) &&
-          objects[path]['org.bluez.GattCharacteristic1']?.UUID === '0000ffe1-0000-1000-8000-00805f9b34fb'
+          objects[path]['org.bluez.GattCharacteristic1']?.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
         );
+        console.log(charPath);
 
         if (!charPath) {
           console.warn(`Characteristic FFE1 not found for device: ${devicePath}`);
