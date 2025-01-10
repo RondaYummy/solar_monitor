@@ -112,19 +112,36 @@ export class BluetoothService implements OnModuleInit {
 
   async setupNotification(deviceProxy: any) {
     try {
-      const charProxy = await this.systemBus.getProxyObject('org.bluez', deviceProxy.path);
-      const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+      const objects = await this.bluez.GetManagedObjects();
+      const characteristics = Object.keys(objects).filter((path) =>
+        path.startsWith(deviceProxy.path) && path.includes('char')
+      );
 
-      await charInterface.StartNotify();
-      console.log('Notifications started.');
+      for (const charPath of characteristics) {
+        const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+        const charProperties = charProxy.getInterface('org.freedesktop.DBus.Properties');
+        const uuid = await charProperties.Get('org.bluez.GattCharacteristic1', 'UUID');
 
-      charInterface.on('PropertiesChanged', (iface, changed) => {
-        if (changed.Value) {
-          const data = Buffer.from(changed.Value.value);
-          console.log('Received notification:', data.toString('hex').toUpperCase());
-          this.processBmsNotification(data);
+        if (uuid.value === '0000ffe1-0000-1000-8000-00805f9b34fb') { // UUID для нотифікацій
+          const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+          // Увімкнути нотифікації
+          await charInterface.StartNotify();
+          console.log(`Notifications started for characteristic: ${charPath}`);
+
+          // Слухати події нотифікацій
+          charInterface.on('PropertiesChanged', (iface, changed) => {
+            if (changed.Value) {
+              const data = Buffer.from(changed.Value.value);
+              console.log('Received notification:', data.toString('hex').toUpperCase());
+              this.processBmsNotification(data);
+            }
+          });
+          return; // Зупинити цикл після налаштування нотифікацій
         }
-      });
+      }
+
+      console.warn('Notification characteristic not found.');
     } catch (error) {
       console.error('Failed to setup notification:', error);
     }
@@ -133,10 +150,10 @@ export class BluetoothService implements OnModuleInit {
   processBmsNotification(data: Buffer) {
     const startSequence = [0x55, 0xAA, 0xEB, 0x90];
     if (data.slice(0, 4).equals(Buffer.from(startSequence))) {
-      console.log('Valid frame start detected.');
-      // Додайте тут логіку обробки отриманих даних
+      console.log('Valid frame start detected. Full data:', data.toString('hex').toUpperCase());
+      // Логіка обробки отриманих даних
     } else {
-      console.warn('Invalid frame start.');
+      console.warn('Invalid frame start. Data:', data.toString('hex').toUpperCase());
     }
   }
 }
