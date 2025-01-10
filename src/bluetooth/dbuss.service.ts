@@ -42,25 +42,26 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        console.log(`Connecting to device: ${devicePath}`);
-        await this.connectToDeviceWithRetries(devicePath, 5, 3000);
+        await this.connectToDeviceWithRetries(devicePath, 5, 10000);
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-        const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
 
-        if (!isConnected.value) {
-          console.warn(`Device ${devicePath} is not connected. Skipping...`);
+        const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
+        const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
+
+        if (!isConnected || !servicesResolved) {
+          console.warn(`Device ${devicePath} is not fully connected or services are not resolved.`);
           continue;
         }
 
-        console.log(`Device ${devicePath} is connected.`);
+        // Зачекайте кілька секунд
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         // Знайти характеристику FFE1
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           return (
-            path.startsWith(devicePath) &&
             characteristic &&
             typeof characteristic.UUID === 'string' &&
             characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
@@ -73,11 +74,7 @@ export class BluetoothService implements OnModuleInit {
         }
 
         console.log(`Found characteristic FFE1: ${charPath}`);
-
-        // Надіслати команду Device Info (0x97)
         await this.sendCommandToBms(charPath, 0x97);
-
-        // Налаштувати нотифікації
         await this.setupNotification(charPath);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`, error);
