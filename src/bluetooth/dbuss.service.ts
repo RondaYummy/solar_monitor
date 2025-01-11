@@ -152,6 +152,7 @@ export class BluetoothService implements OnModuleInit {
       const commandArray = Array.from(command);
 
       await charInterface.WriteValue(commandArray, {});
+      console.log(`[${devName}] Command 0x${commandType.toString(16)} sent to handle 0x03: ${command.toString('hex').toUpperCase()}`);
       console.log(`[${devName}] Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
     } catch (error) {
       console.error(`[${devName}] Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
@@ -175,6 +176,12 @@ export class BluetoothService implements OnModuleInit {
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+
+      // Перевірте, чи charPath відповідає хендлу 0x05
+      if (!charPath.endsWith('/char0011')) {
+        console.warn(`[${devName}] Incorrect characteristic for notifications: ${charPath}`);
+        return;
+      }
 
       await charInterface.StartNotify();
       console.log(`[${devName}] Notifications started.`);
