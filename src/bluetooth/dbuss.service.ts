@@ -57,6 +57,7 @@ export class BluetoothService implements OnModuleInit {
     for (const devicePath of devicePaths) {
       try {
         const res = await this.connectToDeviceWithRetries(devicePath, 5, 8000);
+        console.log(res, 'res');
         if (!res.success && res.devicePath == devicePath) {
           continue;
         }
