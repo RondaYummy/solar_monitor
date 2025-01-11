@@ -225,6 +225,7 @@ export class BluetoothService implements OnModuleInit {
     await charInterface.StartNotify().catch((err) => {
       console.error(`[${devName}] Failed to start notifications:`, err);
     });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log(`[${devName}] Subscribed to notifications.`);
   }
 
