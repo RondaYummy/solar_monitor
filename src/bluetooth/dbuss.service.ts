@@ -92,7 +92,6 @@ export class BluetoothService implements OnModuleInit {
           });
 
         await new Promise((resolve) => setTimeout(resolve, 5000)); // Зачекати 5 секунд
-
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
@@ -163,8 +162,9 @@ export class BluetoothService implements OnModuleInit {
     try {
       const descriptorProxy = await this.systemBus.getProxyObject('org.bluez', descriptorPath);
       const descriptorInterface = descriptorProxy.getInterface('org.bluez.GattDescriptor1');
-
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await descriptorInterface.WriteValue([0x01, 0x00], {});
+      await new Promise((resolve) => setTimeout(resolve, 500));
       console.log(`Notifications enabled via descriptor for: ${descriptorPath}`);
     } catch (error) {
       console.error(`Failed to enable notifications via descriptor: ${descriptorPath}`, error);
