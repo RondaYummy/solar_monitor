@@ -42,7 +42,7 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        await this.connectToDeviceWithRetries(devicePath, 5, 10000);
+        const devName = await this.connectToDeviceWithRetries(devicePath, 5, 10000);
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
@@ -51,20 +51,20 @@ export class BluetoothService implements OnModuleInit {
         const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
 
         if (!isConnected || !servicesResolved) {
-          console.warn(`Device ${devicePath} is not fully connected or services are not resolved.`);
+          console.warn(`[${devName}] Device ${devicePath} is not fully connected or services are not resolved.`);
           continue;
         }
 
         // Вивести всі характеристики для пристрою
-        console.log(`Characteristics for device: ${devicePath}`);
+        console.log(`[${devName}] Characteristics for device: ${devicePath}`);
         Object.keys(objects)
           .filter((path) => path.startsWith(devicePath))
           .forEach((path) => {
             const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
             if (characteristic) {
               const uuid = characteristic.UUID;
-              console.log(`  Path: ${path}`);
-              console.log(`  UUID: ${typeof uuid === 'string' ? uuid : JSON.stringify(uuid)}`);
+              console.log(`[${devName}] Path: ${path}`);
+              console.log(`[${devName}] UUID: ${typeof uuid === 'string' ? uuid : JSON.stringify(uuid)}`);
             }
           });
 
@@ -79,11 +79,11 @@ export class BluetoothService implements OnModuleInit {
         });
 
         if (!charPath) {
-          console.warn(`Characteristic FFE1 not found for device: ${devicePath}`);
+          console.warn(`[${devName}] Characteristic FFE1 not found for device: ${devicePath}`);
           continue;
         }
 
-        console.log(`Found characteristic FFE1: ${charPath}`);
+        console.log(`[${devName}] Found characteristic FFE1: ${charPath}`);
         await this.sendCommandToBms(charPath, 0x97);
         await this.setupNotification(charPath);
       } catch (error) {
@@ -170,20 +170,25 @@ export class BluetoothService implements OnModuleInit {
   }
 
   async connectToDevice(devicePath: string) {
-    // Отримати проксі для адаптера hci0
-    const adapterProxy = await this.systemBus.getProxyObject('org.bluez', '/org/bluez/hci0');
-    const adapterInterface = adapterProxy.getInterface('org.bluez.Adapter1');
+    try {
+      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
 
-    // Отримання проксі-об'єкта для пристрою
-    const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
+      if (!deviceProxy.getInterface('org.bluez.Device1')) {
+        throw new Error(`Device at path ${devicePath} does not implement org.bluez.Device1 interface`);
+      }
 
-    if (!deviceProxy.getInterface('org.bluez.Device1')) {
-      throw new Error(`Device at path ${devicePath} does not implement org.bluez.Device1 interface`);
+      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+      await deviceInterface.Connect();
+
+      // Отримання імені пристрою
+      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+      const deviceName = await properties.Get('org.bluez.Device1', 'Name');
+
+      console.log(`Connected to device: ${devicePath} (Name: ${deviceName.value})`);
+      return deviceName.value; // Повертаємо ім'я пристрою
+    } catch (error) {
+      console.error(`Failed to connect to device ${devicePath}:`, error);
+      throw error; // Перепідкидаємо помилку для подальшої обробки
     }
-
-    // Підключення до пристрою
-    const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
-    await deviceInterface.Connect();
-    console.log(`Connected to device: ${devicePath}`);
   }
 }
