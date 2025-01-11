@@ -55,17 +55,28 @@ export class BluetoothService implements OnModuleInit {
           continue;
         }
 
-        // Зачекайте кілька секунд
-        await new Promise((resolve) => setTimeout(resolve, 10000));
+        // Вивести всі характеристики для пристрою
+        console.log(`Characteristics for device: ${devicePath}`);
+        Object.keys(objects)
+          .filter((path) => path.startsWith(devicePath))
+          .forEach((path) => {
+            const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
+            if (characteristic) {
+              console.log(`  Path: ${path}`);
+              console.log(`  UUID: ${characteristic.UUID}`);
+            }
+          });
 
-        // Знайти характеристику FFE1
+        // Зачекайте кілька секунд
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        // Пошук характеристики FFE1
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           return (
             characteristic &&
             typeof characteristic.UUID === 'string' &&
-            characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb' &&
-            characteristic.Handle === 0x03 // Обов'язково уточніть handle
+            characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
           );
         });
 
