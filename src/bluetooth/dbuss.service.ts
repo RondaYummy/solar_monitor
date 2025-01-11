@@ -246,7 +246,7 @@ export class BluetoothService implements OnModuleInit {
     console.log(`[${devName}] Subscribed to notifications.`);
   }
 
-  async connectToDeviceWithRetries(devicePath: string, retries = 5, delay = 8000): Promise<boolean> {
+  async connectToDeviceWithRetries(devicePath: string, retries = 5, delay = 10000): Promise<boolean> {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
@@ -269,15 +269,23 @@ export class BluetoothService implements OnModuleInit {
     try {
       const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
 
-      if (!deviceProxy.getInterface('org.bluez.Device1')) {
-        throw new Error(`Device at path ${devicePath} does not implement org.bluez.Device1 interface`);
+      if (!deviceProxy || !deviceProxy.getInterface('org.bluez.Device1')) {
+        console.error(`Device ${devicePath} does not have interface org.bluez.Device1`);
+        return;
       }
 
       const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
       await deviceInterface.Connect();
 
       const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+      const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
       const deviceName = await properties.Get('org.bluez.Device1', 'Name');
+      const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
+
+      if (isConnected && servicesResolved) {
+        console.log(`[${devicePath}] Device is already connected and services are resolved.`);
+        return true;
+      }
       console.log(`[${deviceName.value}] Connected to device: ${devicePath} (Name: ${deviceName.value})`);
       return deviceName.value;
     } catch (error) {
