@@ -40,6 +40,9 @@ export class BluetoothService implements OnModuleInit {
 
   async connectToAllDevices() {
     await this.scanForDevices();
+
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
     const objects = await this.bluez.GetManagedObjects();
     console.log(Object.keys(objects), 'All paths');
 
