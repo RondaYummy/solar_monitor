@@ -97,6 +97,7 @@ export class BluetoothService implements OnModuleInit {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
           const handle = characteristic?.Handle;
+          console.log(uuid, handle);
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb' && handle === 0x03;
         });
 
