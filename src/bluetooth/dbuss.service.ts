@@ -183,7 +183,7 @@ export class BluetoothService implements OnModuleInit {
         const devName = await this.connectToDevice(devicePath);
         console.log(`[${devName}] Successfully connected to device: ${devicePath}`);
         response.success = true;
-        return response;
+        return;
       } catch (error) {
         console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
         if (attempt < retries) {
@@ -194,6 +194,8 @@ export class BluetoothService implements OnModuleInit {
         }
       }
     }
+
+    return response;
   }
 
   async connectToDevice(devicePath: string) {
