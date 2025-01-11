@@ -1,9 +1,8 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as dbus from 'dbus-next';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
-  // private readonly logger = new Logger(BluetoothService.name);
   private systemBus;
   private bluez;
 
@@ -40,8 +39,7 @@ export class BluetoothService implements OnModuleInit {
 
   async connectToAllDevices() {
     await this.scanForDevices();
-
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // Зачекати 10 секунд на сканування
 
     const objects = await this.bluez.GetManagedObjects();
     console.log(Object.keys(objects), 'All paths');
@@ -59,7 +57,7 @@ export class BluetoothService implements OnModuleInit {
         const connected = await this.connectToDeviceWithRetries(devicePath, 5, 8000);
         if (!connected) {
           console.warn(`Skipping device ${devicePath} as it could not connect after multiple attempts.`);
-          continue; // Пропустити пристрій, якщо підключення не вдалося
+          continue;
         }
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
@@ -75,7 +73,6 @@ export class BluetoothService implements OnModuleInit {
           continue;
         }
 
-        // Вивести всі характеристики для пристрою
         console.log(`[${devName}] Characteristics for device: ${devicePath}`);
         Object.keys(objects)
           .filter((path) => path.startsWith(devicePath))
@@ -87,17 +84,14 @@ export class BluetoothService implements OnModuleInit {
               console.log(`Path: ${path}`);
               console.log(`UUID: ${typeof uuid === 'string' ? uuid : JSON.stringify(uuid)}`);
               console.groupEnd();
-
             }
           });
 
-        // Зачекайте кілька секунд
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Зачекати 5 секунд
 
-        // Пошук характеристики FFE1
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
-          const uuid = characteristic?.UUID?.value; // Додано витяг значення з об'єкта
+          const uuid = characteristic?.UUID?.value;
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
@@ -126,17 +120,14 @@ export class BluetoothService implements OnModuleInit {
       0x00                    // CRC
     ]);
 
-    // Обчислення CRC
     command[command.length - 1] = command.slice(0, -1).reduce((crc, byte) => crc + byte, 0) & 0xFF;
 
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-
-      // Перетворення Buffer у масив чисел (DBus очікує масив Variant)
       const commandArray = Array.from(command);
 
-      await charInterface.WriteValue(commandArray, {}); // Передаємо масив чисел
+      await charInterface.WriteValue(commandArray, {});
       console.log(`[${devName}] Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
     } catch (error) {
       console.error(`[${devName}] Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
@@ -152,6 +143,8 @@ export class BluetoothService implements OnModuleInit {
       console.log(`[${devName}] Notifications started.`);
 
       charInterface.on('PropertiesChanged', (iface, changed) => {
+        console.log(`[${devName}] PropertiesChanged event received:`, iface, changed);
+
         if (changed.Value) {
           const data = Buffer.from(changed.Value.value);
           console.log(`[${devName}] Notification received:`, data.toString('hex').toUpperCase());
@@ -159,7 +152,7 @@ export class BluetoothService implements OnModuleInit {
         }
       });
     } catch (error) {
-      console.error('Failed to setup notification:', error);
+      console.error(`[${devName}] Failed to setup notification:`, error);
     }
   }
 
@@ -203,15 +196,13 @@ export class BluetoothService implements OnModuleInit {
       const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
       await deviceInterface.Connect();
 
-      // Отримання імені пристрою
       const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
       const deviceName = await properties.Get('org.bluez.Device1', 'Name');
-
       console.log(`[${deviceName.value}] Connected to device: ${devicePath} (Name: ${deviceName.value})`);
       return deviceName.value;
     } catch (error) {
       console.error(`Failed to connect to device ${devicePath}:`, error);
-      throw error; // Перепідкидаємо помилку для подальшої обробки
+      throw error;
     }
   }
 }
