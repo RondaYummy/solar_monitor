@@ -56,7 +56,7 @@ export class BluetoothService implements OnModuleInit {
         }
 
         // Зачекайте кілька секунд
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 10000));
 
         // Знайти характеристику FFE1
         const charPath = Object.keys(objects).find((path) => {
@@ -64,7 +64,8 @@ export class BluetoothService implements OnModuleInit {
           return (
             characteristic &&
             typeof characteristic.UUID === 'string' &&
-            characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
+            characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb' &&
+            characteristic.Handle === 0x03 // Обов'язково уточніть handle
           );
         });
 
@@ -99,7 +100,7 @@ export class BluetoothService implements OnModuleInit {
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-      await charInterface.WriteValue(command, {});
+      await charInterface.WriteValue(command, { offset: 0 });
       console.log(`Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
     } catch (error) {
       console.error(`Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
@@ -156,12 +157,26 @@ export class BluetoothService implements OnModuleInit {
   }
 
   async connectToDevice(devicePath: string) {
+    // Отримати проксі для адаптера hci0
+    const adapterProxy = await this.systemBus.getProxyObject('org.bluez', '/org/bluez/hci0');
+    const adapterInterface = adapterProxy.getInterface('org.bluez.Adapter1');
+
+    // Налаштувати MTU (максимальний розмір передачі)
+    try {
+      await adapterInterface.Set('org.bluez.Adapter1', 'MTU', 23); // або збільште до 247 для BLE
+      console.log('MTU successfully set to 23.');
+    } catch (error) {
+      console.error('Failed to set MTU:', error);
+    }
+
+    // Отримання проксі-об'єкта для пристрою
     const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
 
     if (!deviceProxy.getInterface('org.bluez.Device1')) {
       throw new Error(`Device at path ${devicePath} does not implement org.bluez.Device1 interface`);
     }
 
+    // Підключення до пристрою
     const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
     await deviceInterface.Connect();
     console.log(`Connected to device: ${devicePath}`);
