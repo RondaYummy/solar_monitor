@@ -31,7 +31,15 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
+  async scanForDevices() {
+    const adapterProxy = await this.systemBus.getProxyObject('org.bluez', '/org/bluez/hci0');
+    const adapterInterface = adapterProxy.getInterface('org.bluez.Adapter1');
+    await adapterInterface.StartDiscovery();
+    console.log('Scanning for devices...');
+  }
+
   async connectToAllDevices() {
+    await this.scanForDevices();
     const objects = await this.bluez.GetManagedObjects();
     console.log(Object.keys(objects), 'All paths');
 
