@@ -96,9 +96,9 @@ export class BluetoothService implements OnModuleInit {
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
-          const handle = characteristic?.Handle;
-          console.log(uuid, handle);
-          return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb' && handle === 0x03;
+          // const handle = characteristic?.Handle;
+          console.log(uuid);
+          return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
         if (!charPath) {
@@ -107,10 +107,39 @@ export class BluetoothService implements OnModuleInit {
         }
 
         console.log(`Found characteristic FFE1: ${charPath}`);
+        await this.testCharacteristics(devicePath, devName);
+
         await this.sendCommandToBms(charPath, 0x97, devName);
         await this.setupNotification(charPath, devName);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`, error);
+      }
+    }
+  }
+
+  async testCharacteristics(devicePath: string, devName: string) {
+    const uuidsToTest = [
+      'f000ffc2-0451-4000-b000-000000000000',
+      '00002a05-0000-1000-8000-00805f9b34fb',
+    ];
+
+    for (const uuid of uuidsToTest) {
+      try {
+        const charPath = Object.keys(objects).find((path) => {
+          const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
+          const charUuid = characteristic?.UUID?.value ?? characteristic?.UUID;
+          return charUuid && charUuid.toLowerCase() === uuid;
+        });
+
+        if (!charPath) {
+          console.warn(`[${devName}] Characteristic ${uuid} not found.`);
+          continue;
+        }
+
+        console.log(`[${devName}] Testing UUID: ${uuid}`);
+        await this.sendCommandToBms(charPath, 0x97, devName); // 0x97 як приклад команди
+      } catch (error) {
+        console.error(`[${devName}] Error testing UUID ${uuid}:`, error);
       }
     }
   }
