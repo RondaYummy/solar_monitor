@@ -56,10 +56,10 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        const res = await this.connectToDeviceWithRetries(devicePath, 5, 8000);
-        console.log(res, 'res');
-        if (!res.success && res.devicePath == devicePath) {
-          continue;
+        const connected = await this.connectToDeviceWithRetries(devicePath, 5, 8000);
+        if (!connected) {
+          console.warn(`Skipping device ${devicePath} as it could not connect after multiple attempts.`);
+          continue; // Пропустити пристрій, якщо підключення не вдалося
         }
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
@@ -173,30 +173,23 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async connectToDeviceWithRetries(devicePath: string, retries = 10, delay = 5000) {
-    const response = {
-      devicePath,
-      success: false,
-    };
+  async connectToDeviceWithRetries(devicePath: string, retries = 5, delay = 8000): Promise<boolean> {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
-        const devName = await this.connectToDevice(devicePath);
-        console.log(`[${devName}] Successfully connected to device: ${devicePath}`);
-        response.success = true;
-        return;
+        await this.connectToDevice(devicePath);
+        console.log(`Successfully connected to device: ${devicePath}`);
+        return true;
       } catch (error) {
         console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
         if (attempt < retries) {
           console.log(`Retrying in ${delay / 1000} seconds...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
-        } else {
-          console.error(`All attempts to connect to device ${devicePath} failed.`);
         }
       }
     }
-
-    return response;
+    console.error(`All attempts to connect to device ${devicePath} failed.`);
+    return false;
   }
 
   async connectToDevice(devicePath: string) {
