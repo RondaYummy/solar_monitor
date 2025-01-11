@@ -109,7 +109,11 @@ export class BluetoothService implements OnModuleInit {
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-      await charInterface.WriteValue(command, { offset: 0 });
+
+      // Перетворення Buffer у масив чисел (DBus очікує масив Variant)
+      const commandArray = Array.from(command);
+
+      await charInterface.WriteValue(commandArray, {}); // Передаємо масив чисел
       console.log(`Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
     } catch (error) {
       console.error(`Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
