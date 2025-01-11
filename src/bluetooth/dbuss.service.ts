@@ -46,8 +46,8 @@ export class BluetoothService implements OnModuleInit {
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-        const devName = await properties.Get('org.bluez.Device1', 'Name');
-        console.log(devName);
+        const deviceName = await properties.Get('org.bluez.Device1', 'Name');
+        const devName = typeof deviceName === 'string' ? deviceName : JSON.stringify(deviceName);
 
         const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
         const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
