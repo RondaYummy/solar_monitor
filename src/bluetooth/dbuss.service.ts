@@ -3,7 +3,7 @@ import * as dbus from 'dbus-next';
 
 @Injectable()
 export class BluetoothService implements OnModuleInit {
-  private readonly logger = new Logger(BluetoothService.name);
+  // private readonly logger = new Logger(BluetoothService.name);
   private systemBus;
   private bluez;
 
@@ -53,7 +53,7 @@ export class BluetoothService implements OnModuleInit {
         const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
 
         if (!isConnected || !servicesResolved) {
-          console.warn(`Device ${devicePath} is not fully connected or services are not resolved.`);
+          console.warn(`[${devName}] Device ${devicePath} is not fully connected or services are not resolved.`);
           continue;
         }
 
