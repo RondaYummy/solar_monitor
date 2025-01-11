@@ -254,7 +254,8 @@ export class BluetoothService implements OnModuleInit {
         console.log(`Successfully connected to device: ${devicePath}`);
         return true;
       } catch (error) {
-        console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
+        const errorText = error?.text || error?.message || 'Unknown error';
+        console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, errorText);
         if (attempt < retries) {
           console.log(`Retrying in ${delay / 1000} seconds...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
@@ -290,7 +291,7 @@ export class BluetoothService implements OnModuleInit {
       return deviceName.value;
     } catch (error) {
       const errorText = error?.text || error?.message || 'Unknown error';
-      console.error(`Failed to connect to device ${devicePath}`);
+      console.error(`Failed to connect to device ${devicePath}: ${errorText}`);
       throw error;
     }
   }
