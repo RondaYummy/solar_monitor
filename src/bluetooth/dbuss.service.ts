@@ -74,11 +74,8 @@ export class BluetoothService implements OnModuleInit {
         // Пошук характеристики FFE1
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
-          return (
-            characteristic &&
-            typeof characteristic.UUID === 'string' &&
-            characteristic.UUID.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb'
-          );
+          const uuid = characteristic?.UUID?.value; // Додано витяг значення з об'єкта
+          return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
         if (!charPath) {
