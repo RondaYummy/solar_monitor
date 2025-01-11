@@ -122,6 +122,7 @@ export class BluetoothService implements OnModuleInit {
       'f000ffc2-0451-4000-b000-000000000000',
       '00002a05-0000-1000-8000-00805f9b34fb',
     ];
+    const objects = await this.bluez.GetManagedObjects();
 
     for (const uuid of uuidsToTest) {
       try {
