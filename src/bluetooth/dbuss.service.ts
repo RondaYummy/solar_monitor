@@ -33,6 +33,8 @@ export class BluetoothService implements OnModuleInit {
 
   async connectToAllDevices() {
     const objects = await this.bluez.GetManagedObjects();
+    console.log(Object.keys(objects), 'All paths');
+
     const devicePaths = Object.keys(objects).filter((path) =>
       path.includes('/org/bluez/hci0/dev_') &&
       !path.includes('service') &&
