@@ -62,8 +62,9 @@ export class BluetoothService implements OnModuleInit {
           .forEach((path) => {
             const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
             if (characteristic) {
+              const uuid = characteristic.UUID;
               console.log(`  Path: ${path}`);
-              console.log(`  UUID: ${characteristic.UUID}`);
+              console.log(`  UUID: ${typeof uuid === 'string' ? uuid : JSON.stringify(uuid)}`);
             }
           });
 
