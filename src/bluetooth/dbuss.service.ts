@@ -107,15 +107,15 @@ export class BluetoothService implements OnModuleInit {
         }
 
         console.log(`Found characteristic FFE1: ${charPath}`);
-        await this.sendCommandToBms(charPath, 0x97);
-        await this.setupNotification(charPath);
+        await this.sendCommandToBms(charPath, 0x97, devName);
+        await this.setupNotification(charPath, devName);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`, error);
       }
     }
   }
 
-  async sendCommandToBms(charPath: string, commandType: number) {
+  async sendCommandToBms(charPath: string, commandType: number, devName: string) {
     const command = Buffer.from([
       0xAA, 0x55, 0x90, 0xEB, // Header
       commandType,            // Command (0x97 - Device Info)
@@ -137,24 +137,24 @@ export class BluetoothService implements OnModuleInit {
       const commandArray = Array.from(command);
 
       await charInterface.WriteValue(commandArray, {}); // Передаємо масив чисел
-      console.log(`Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
+      console.log(`[${devName}] Command 0x${commandType.toString(16)} sent: ${command.toString('hex').toUpperCase()}`);
     } catch (error) {
-      console.error(`Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
+      console.error(`[${devName}] Failed to send command 0x${commandType.toString(16)} to BMS:`, error);
     }
   }
 
-  async setupNotification(charPath: string) {
+  async setupNotification(charPath: string, devName: string) {
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
 
       await charInterface.StartNotify();
-      console.log('Notifications started.');
+      console.log(`[${devName}] Notifications started.`);
 
       charInterface.on('PropertiesChanged', (iface, changed) => {
         if (changed.Value) {
           const data = Buffer.from(changed.Value.value);
-          console.log('Notification received:', data.toString('hex').toUpperCase());
+          console.log(`[${devName}] Notification received:`, data.toString('hex').toUpperCase());
           this.processBmsNotification(data);
         }
       });
@@ -163,13 +163,13 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  processBmsNotification(data: Buffer) {
+  processBmsNotification(data: Buffer, devName: string) {
     const startSequence = [0x55, 0xAA, 0xEB, 0x90];
     if (data.slice(0, 4).equals(Buffer.from(startSequence))) {
-      console.log('Valid frame start detected.');
+      console.log(`[${devName}] Valid frame start detected.`);
       // Додайте обробку даних тут
     } else {
-      console.warn('Invalid frame start.');
+      console.warn(`[${devName}] Invalid frame start.`);
     }
   }
 
@@ -207,7 +207,7 @@ export class BluetoothService implements OnModuleInit {
       const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
       const deviceName = await properties.Get('org.bluez.Device1', 'Name');
 
-      console.log(`[${deviceName}] Connected to device: ${devicePath} (Name: ${deviceName.value})`);
+      console.log(`[${deviceName.value}] Connected to device: ${devicePath} (Name: ${deviceName.value})`);
       return deviceName.value;
     } catch (error) {
       console.error(`Failed to connect to device ${devicePath}:`, error);
