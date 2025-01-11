@@ -42,16 +42,17 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        const devName = await this.connectToDeviceWithRetries(devicePath, 5, 10000);
+        await this.connectToDeviceWithRetries(devicePath, 5, 10000);
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+        const devName = await properties.Get('org.bluez.Device1', 'Name');
 
         const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
         const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
 
         if (!isConnected || !servicesResolved) {
-          console.warn(`[${devName}] Device ${devicePath} is not fully connected or services are not resolved.`);
+          console.warn(`Device ${devicePath} is not fully connected or services are not resolved.`);
           continue;
         }
 
@@ -83,7 +84,7 @@ export class BluetoothService implements OnModuleInit {
           continue;
         }
 
-        console.log(`[${devName}] Found characteristic FFE1: ${charPath}`);
+        console.log(`Found characteristic FFE1: ${charPath}`);
         await this.sendCommandToBms(charPath, 0x97);
         await this.setupNotification(charPath);
       } catch (error) {
@@ -154,8 +155,8 @@ export class BluetoothService implements OnModuleInit {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
-        await this.connectToDevice(devicePath);
-        console.log(`Successfully connected to device: ${devicePath}`);
+        const devName = await this.connectToDevice(devicePath);
+        console.log(`[${devName}] Successfully connected to device: ${devicePath}`);
         return;
       } catch (error) {
         console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
@@ -185,7 +186,7 @@ export class BluetoothService implements OnModuleInit {
       const deviceName = await properties.Get('org.bluez.Device1', 'Name');
 
       console.log(`Connected to device: ${devicePath} (Name: ${deviceName.value})`);
-      return deviceName.value; // Повертаємо ім'я пристрою
+      return deviceName.value;
     } catch (error) {
       console.error(`Failed to connect to device ${devicePath}:`, error);
       throw error; // Перепідкидаємо помилку для подальшої обробки
