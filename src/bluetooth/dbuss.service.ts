@@ -169,6 +169,7 @@ export class BluetoothService implements OnModuleInit {
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
           console.error(`All attempts to connect to device ${devicePath} failed.`);
+          break;
         }
       }
     }
