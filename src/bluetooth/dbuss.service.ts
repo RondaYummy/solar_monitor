@@ -5,6 +5,7 @@ import * as dbus from 'dbus-next';
 export class BluetoothService implements OnModuleInit {
   private systemBus;
   private bluez;
+  private responseBuffer = Buffer.alloc(0);
 
   constructor() {
     try {
@@ -95,7 +96,8 @@ export class BluetoothService implements OnModuleInit {
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
-          return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
+          const handle = characteristic?.Handle;
+          return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb' && handle === 0x03;
         });
 
         if (!charPath) {
@@ -112,6 +114,10 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
+  calculateCrc(data: Buffer): number {
+    return data.slice(0, -1).reduce((crc, byte) => crc + byte, 0) & 0xFF;
+  }
+
   async sendCommandToBms(charPath: string, commandType: number, devName: string) {
     const command = Buffer.from([
       0xAA, 0x55, 0x90, 0xEB, // Header
@@ -123,7 +129,7 @@ export class BluetoothService implements OnModuleInit {
       0x00                    // CRC
     ]);
 
-    command[command.length - 1] = command.slice(0, -1).reduce((crc, byte) => crc + byte, 0) & 0xFF;
+    command[command.length - 1] = this.calculateCrc(command);
 
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
@@ -148,8 +154,8 @@ export class BluetoothService implements OnModuleInit {
       charInterface.on('PropertiesChanged', (iface, changed) => {
         console.log(`[${devName}] PropertiesChanged event received:`, iface, changed);
 
-        if (changed.Value) {
-          const data = Buffer.from(changed.Value.value);
+        if (Array.isArray(changed.Value)) {
+          const data = Buffer.from(changed.Value);
           console.log(`[${devName}] Notification received:`, data.toString('hex').toUpperCase());
           this.processBmsNotification(data, devName);
         }
@@ -159,14 +165,65 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  processBmsNotification(data: Buffer, devName: string) {
-    const startSequence = [0x55, 0xAA, 0xEB, 0x90];
-    if (data.slice(0, 4).equals(Buffer.from(startSequence))) {
-      console.log(`[${devName}] Valid frame start detected.`);
-      // Додайте обробку даних тут
-    } else {
-      console.warn(`[${devName}] Invalid frame start.`);
+  validateCrc(data: Buffer): boolean {
+    if (data.length < 20) {
+      console.warn('Data is too short to contain a valid CRC.');
+      return false;
     }
+
+    const calculatedCrc = data.slice(0, -1).reduce((crc, byte) => crc + byte, 0) & 0xFF;
+    const receivedCrc = data[data.length - 1];
+
+    return calculatedCrc === receivedCrc;
+  }
+
+  processBmsNotification(data: Buffer, devName: string) {
+    const startSequence = Buffer.from([0x55, 0xAA, 0xEB, 0x90]);
+    if (data.slice(0, 4).equals(startSequence)) {
+      console.log(`[${devName}] Valid frame start detected.`);
+      this.responseBuffer = Buffer.alloc(0); // Очищення буфера
+    }
+    this.responseBuffer = Buffer.concat([this.responseBuffer, data]);
+
+    if (this.responseBuffer.length >= 320) { // Максимальний розмір фрейму
+      const isValidCrc = this.validateCrc(this.responseBuffer);
+      if (isValidCrc) {
+        console.log(`[${devName}] Valid frame received:`, this.responseBuffer.toString('hex').toUpperCase());
+        this.handleBmsResponse(this.responseBuffer, devName);
+      } else {
+        console.warn(`[${devName}] Invalid CRC. Frame discarded.`);
+      }
+      this.responseBuffer = Buffer.alloc(0); // Скидання буфера
+    }
+  }
+
+  handleBmsResponse(data: Buffer, devName: string) {
+    const responseType = data[4];
+    switch (responseType) {
+      case 0x01:
+        console.log(`[${devName}] Settings frame received`);
+        // Обробка налаштувань
+        break;
+      case 0x02:
+        console.log(`[${devName}] Cell info frame received`);
+        // Обробка інформації про елементи
+        break;
+      case 0x03:
+        console.log(`[${devName}] Device info frame received`);
+        // Обробка інформації про пристрій
+        break;
+      default:
+        console.warn(`[${devName}] Unknown response type: ${responseType}`);
+    }
+  }
+
+  async subscribeToNotifications(charPath: string, devName: string) {
+    const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
+    const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
+    await charInterface.StartNotify().catch((err) => {
+      console.error(`[${devName}] Failed to start notifications:`, err);
+    });
+    console.log(`[${devName}] Subscribed to notifications.`);
   }
 
   async connectToDeviceWithRetries(devicePath: string, retries = 5, delay = 8000): Promise<boolean> {
