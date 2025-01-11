@@ -289,7 +289,8 @@ export class BluetoothService implements OnModuleInit {
       console.log(`[${deviceName.value}] Connected to device: ${devicePath} (Name: ${deviceName.value})`);
       return deviceName.value;
     } catch (error) {
-      console.error(`Failed to connect to device ${devicePath}:`, error);
+      const errorText = error?.text || error?.message || 'Unknown error';
+      console.error(`Failed to connect to device ${devicePath}:`, errorText);
       throw error;
     }
   }
