@@ -111,7 +111,8 @@ export class BluetoothService implements OnModuleInit {
         );
 
         const descriptor2902 = descriptorPaths.find((path) =>
-          objects[path]?.['org.bluez.GattDescriptor1']?.UUID?.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb'
+          typeof objects[path]?.['org.bluez.GattDescriptor1']?.UUID === 'string' &&
+          objects[path]['org.bluez.GattDescriptor1'].UUID.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb'
         );
 
         if (descriptor2902) {
@@ -179,7 +180,7 @@ export class BluetoothService implements OnModuleInit {
       console.log(`[${devName}] Notifications started.`);
 
       charInterface.on('PropertiesChanged', (iface, changed) => {
-        if (Array.isArray(changed.Value)) {
+        if (changed.Value) {
           const data = Buffer.from(changed.Value);
           console.log(`[${devName}] Notification received: ${data.toString('hex').toUpperCase()}`);
           this.processBmsNotification(data, devName);
