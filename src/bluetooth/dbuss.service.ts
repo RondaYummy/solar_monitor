@@ -186,9 +186,9 @@ export class BluetoothService implements OnModuleInit {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
 
-      // Перевірте, чи charPath відповідає хендлу 0x05
-      if (!charPath.endsWith('/char0011')) {
-        console.warn(`[${devName}] Incorrect characteristic for notifications: ${charPath}`);
+      const characteristicFlags = objects[charPath]['org.bluez.GattCharacteristic1'].Flags;
+      if (!characteristicFlags.includes('notify')) {
+        console.warn(`[${devName}] Characteristic ${charPath} does not support notifications.`);
         return;
       }
 
