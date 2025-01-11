@@ -110,9 +110,9 @@ export class BluetoothService implements OnModuleInit {
         );
 
         const descriptor2902 = descriptorPaths.find((path) => {
-          console.log(objects[path]['org.bluez.GattDescriptor1'].UUID);
+          console.log(objects[path]['org.bluez.GattDescriptor1'].UUID?.value);
           return typeof objects[path]?.['org.bluez.GattDescriptor1']?.UUID === 'string' &&
-            objects[path]['org.bluez.GattDescriptor1'].UUID.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb';
+            objects[path]['org.bluez.GattDescriptor1'].UUID?.value.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb';
         }
         );
         console.log(descriptor2902, 'descriptor2902');
