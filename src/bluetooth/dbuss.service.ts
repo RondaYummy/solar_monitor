@@ -161,14 +161,6 @@ export class BluetoothService implements OnModuleInit {
     const adapterProxy = await this.systemBus.getProxyObject('org.bluez', '/org/bluez/hci0');
     const adapterInterface = adapterProxy.getInterface('org.bluez.Adapter1');
 
-    // Налаштувати MTU (максимальний розмір передачі)
-    try {
-      await adapterInterface.Set('org.bluez.Adapter1', 'MTU', 23); // або збільште до 247 для BLE
-      console.log('MTU successfully set to 23.');
-    } catch (error) {
-      console.error('Failed to set MTU:', error);
-    }
-
     // Отримання проксі-об'єкта для пристрою
     const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
 
