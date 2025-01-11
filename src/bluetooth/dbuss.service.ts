@@ -39,10 +39,11 @@ export class BluetoothService implements OnModuleInit {
       !path.includes('char') &&
       !path.includes('desc')
     );
+    console.log(devicePaths, 'devicePaths');
 
     for (const devicePath of devicePaths) {
       try {
-        await this.connectToDeviceWithRetries(devicePath, 5, 10000);
+        await this.connectToDeviceWithRetries(devicePath, 5, 8000);
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
