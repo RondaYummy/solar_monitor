@@ -155,7 +155,7 @@ export class BluetoothService implements OnModuleInit {
         if (changed.Value) {
           const data = Buffer.from(changed.Value.value);
           console.log(`[${devName}] Notification received:`, data.toString('hex').toUpperCase());
-          this.processBmsNotification(data);
+          this.processBmsNotification(data, devName);
         }
       });
     } catch (error) {
