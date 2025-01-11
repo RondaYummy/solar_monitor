@@ -96,8 +96,6 @@ export class BluetoothService implements OnModuleInit {
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
-          // const handle = characteristic?.Handle;
-          console.log(uuid);
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
@@ -107,6 +105,22 @@ export class BluetoothService implements OnModuleInit {
         }
 
         console.log(`Found characteristic FFE1: ${charPath}`);
+
+        const descriptorPaths = Object.keys(objects).filter(
+          (path) => path.startsWith(charPath) && path.includes('desc')
+        );
+
+        const descriptor2902 = descriptorPaths.find((path) =>
+          objects[path]?.['org.bluez.GattDescriptor1']?.UUID?.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb'
+        );
+
+        if (descriptor2902) {
+          console.log(`[${devName}] Found descriptor 0x2902 for characteristic ${charPath}: ${descriptor2902}`);
+          await this.enableNotificationsForDescriptor(descriptor2902);
+        } else {
+          console.warn(`[${devName}] Descriptor 0x2902 not found for characteristic ${charPath}`);
+        }
+
         await this.sendCommandToBms(charPath, 0x97, devName);
         await this.setupNotification(charPath, devName);
       } catch (error) {
@@ -122,12 +136,12 @@ export class BluetoothService implements OnModuleInit {
   async sendCommandToBms(charPath: string, commandType: number, devName: string) {
     const command = Buffer.from([
       0xAA, 0x55, 0x90, 0xEB, // Header
-      commandType,            // Command (0x97 - Device Info)
-      0x00,                   // Length
+      commandType, // Command (0x97 - Device Info)
+      0x00, // Length
       0x00, 0x00, 0x00, 0x00, // Value
       0x00, 0x00, 0x00, 0x00, // Padding
       0x00, 0x00, 0x00, 0x00,
-      0x00                    // CRC
+      0x00, // CRC
     ]);
 
     command[command.length - 1] = this.calculateCrc(command);
@@ -144,6 +158,18 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
+  async enableNotificationsForDescriptor(descriptorPath: string) {
+    try {
+      const descriptorProxy = await this.systemBus.getProxyObject('org.bluez', descriptorPath);
+      const descriptorInterface = descriptorProxy.getInterface('org.bluez.GattDescriptor1');
+
+      await descriptorInterface.WriteValue([0x01, 0x00], {});
+      console.log(`Notifications enabled via descriptor for: ${descriptorPath}`);
+    } catch (error) {
+      console.error(`Failed to enable notifications via descriptor: ${descriptorPath}`, error);
+    }
+  }
+
   async setupNotification(charPath: string, devName: string) {
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
@@ -153,11 +179,9 @@ export class BluetoothService implements OnModuleInit {
       console.log(`[${devName}] Notifications started.`);
 
       charInterface.on('PropertiesChanged', (iface, changed) => {
-        console.log(`[${devName}] PropertiesChanged event received:`, iface, changed);
-
         if (Array.isArray(changed.Value)) {
           const data = Buffer.from(changed.Value);
-          console.log(`[${devName}] Notification received:`, data.toString('hex').toUpperCase());
+          console.log(`[${devName}] Notification received: ${data.toString('hex').toUpperCase()}`);
           this.processBmsNotification(data, devName);
         }
       });
@@ -168,7 +192,6 @@ export class BluetoothService implements OnModuleInit {
 
   validateCrc(data: Buffer): boolean {
     if (data.length < 20) {
-      console.warn('Data is too short to contain a valid CRC.');
       return false;
     }
 
@@ -181,21 +204,18 @@ export class BluetoothService implements OnModuleInit {
   processBmsNotification(data: Buffer, devName: string) {
     const startSequence = Buffer.from([0x55, 0xAA, 0xEB, 0x90]);
     if (data.slice(0, 4).equals(startSequence)) {
-      console.log(`[${devName}] Valid frame start detected.`);
-      this.responseBuffer = Buffer.alloc(0); // Очищення буфера
+      this.responseBuffer = Buffer.alloc(0);
     }
     this.responseBuffer = Buffer.concat([this.responseBuffer, data]);
 
     if (this.responseBuffer.length >= 320) {
       const isValidCrc = this.validateCrc(this.responseBuffer);
       if (!isValidCrc) {
-        console.warn(`[${devName}] Invalid CRC. Frame discarded.`);
-        this.responseBuffer = Buffer.alloc(0); // Скидання буфера
+        this.responseBuffer = Buffer.alloc(0);
         return;
       }
-      // Обробка коректного фрейму
       this.handleBmsResponse(this.responseBuffer, devName);
-      this.responseBuffer = Buffer.alloc(0); // Скидання буфера
+      this.responseBuffer = Buffer.alloc(0);
     }
   }
 
@@ -204,15 +224,12 @@ export class BluetoothService implements OnModuleInit {
     switch (responseType) {
       case 0x01:
         console.log(`[${devName}] Settings frame received`);
-        // Обробка налаштувань
         break;
       case 0x02:
         console.log(`[${devName}] Cell info frame received`);
-        // Обробка інформації про елементи
         break;
       case 0x03:
         console.log(`[${devName}] Device info frame received`);
-        // Обробка інформації про пристрій
         break;
       default:
         console.warn(`[${devName}] Unknown response type: ${responseType}`);
