@@ -98,7 +98,7 @@ export class BluetoothService implements OnModuleInit {
           const uuid = characteristic?.UUID?.value;
           // const handle = characteristic?.Handle;
           console.log(uuid);
-          return uuid && uuid.toLowerCase() === 'f000ffc2-0451-4000-b000-000000000000';
+          return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
         if (!charPath) {
@@ -186,14 +186,15 @@ export class BluetoothService implements OnModuleInit {
     }
     this.responseBuffer = Buffer.concat([this.responseBuffer, data]);
 
-    if (this.responseBuffer.length >= 320) { // Максимальний розмір фрейму
+    if (this.responseBuffer.length >= 320) {
       const isValidCrc = this.validateCrc(this.responseBuffer);
-      if (isValidCrc) {
-        console.log(`[${devName}] Valid frame received:`, this.responseBuffer.toString('hex').toUpperCase());
-        this.handleBmsResponse(this.responseBuffer, devName);
-      } else {
+      if (!isValidCrc) {
         console.warn(`[${devName}] Invalid CRC. Frame discarded.`);
+        this.responseBuffer = Buffer.alloc(0); // Скидання буфера
+        return;
       }
+      // Обробка коректного фрейму
+      this.handleBmsResponse(this.responseBuffer, devName);
       this.responseBuffer = Buffer.alloc(0); // Скидання буфера
     }
   }
