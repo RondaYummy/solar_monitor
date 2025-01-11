@@ -56,7 +56,10 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        await this.connectToDeviceWithRetries(devicePath, 5, 8000);
+        const res = await this.connectToDeviceWithRetries(devicePath, 5, 8000);
+        if (!res.success && res.devicePath == devicePath) {
+          continue;
+        }
 
         const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
         const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
@@ -170,12 +173,17 @@ export class BluetoothService implements OnModuleInit {
   }
 
   async connectToDeviceWithRetries(devicePath: string, retries = 10, delay = 5000) {
+    const response = {
+      devicePath,
+      success: false,
+    };
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
         const devName = await this.connectToDevice(devicePath);
         console.log(`[${devName}] Successfully connected to device: ${devicePath}`);
-        return;
+        response.success = true;
+        return response;
       } catch (error) {
         console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, error);
         if (attempt < retries) {
