@@ -95,7 +95,6 @@ export class BluetoothService implements OnModuleInit {
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
-          console.log('UUID', uuid);
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
@@ -110,10 +109,13 @@ export class BluetoothService implements OnModuleInit {
           (path) => path.startsWith(charPath) && path.includes('desc')
         );
 
-        const descriptor2902 = descriptorPaths.find((path) =>
-          typeof objects[path]?.['org.bluez.GattDescriptor1']?.UUID === 'string' &&
-          objects[path]['org.bluez.GattDescriptor1'].UUID.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb'
+        const descriptor2902 = descriptorPaths.find((path) => {
+          console.log(objects[path]['org.bluez.GattDescriptor1'].UUID);
+          return typeof objects[path]?.['org.bluez.GattDescriptor1']?.UUID === 'string' &&
+            objects[path]['org.bluez.GattDescriptor1'].UUID.toLowerCase() === '00002902-0000-1000-8000-00805f9b34fb';
+        }
         );
+        console.log(descriptor2902, 'descriptor2902');
 
         if (descriptor2902) {
           console.log(`[${devName}] Found descriptor 0x2902 for characteristic ${charPath}: ${descriptor2902}`);
