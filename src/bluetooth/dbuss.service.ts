@@ -119,8 +119,9 @@ export class BluetoothService implements OnModuleInit {
         );
 
         const descriptor2902 = descriptorPaths.find((path) => {
-          return objects[path]['org.bluez.GattDescriptor1'].UUID?.value &&
-            objects[path]['org.bluez.GattDescriptor1'].UUID?.value === '00002902-0000-1000-8000-00805f9b34fb';
+          const id = objects[path]['org.bluez.GattDescriptor1'].UUID?.value || objects[path]['org.bluez.GattDescriptor1'].UUID;
+          console.log(`[${devName}] DESCRIPTOR 2902: ${objects[path]['org.bluez.GattDescriptor1'].UUID?.value}`);
+          return id && id === '00002902-0000-1000-8000-00805f9b34fb';
         }
         );
 
@@ -185,7 +186,6 @@ export class BluetoothService implements OnModuleInit {
         return false;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
       await descriptorInterface.WriteValue([0x01, 0x00], {});
       await new Promise((resolve) => setTimeout(resolve, 500));
       console.log(`Notifications enabled via descriptor for: ${descriptorPath}`);
@@ -294,8 +294,6 @@ export class BluetoothService implements OnModuleInit {
 
       console.log(`Calling Connect() on device: ${devicePath}`);
       await deviceInterface.Connect();
-
-      // Додатковий час для стабілізації з'єднання
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
