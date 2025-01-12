@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 // import { BluetoothService } from './bluetooth/bluetooth.service';
 import { BluetoothService } from './bluetooth/dbuss.service';
-import { GattService } from './bluetooth/gatttool.service';
 import { TelegramModule } from './telegram/telegram.module';
 import { validate } from './env.validation';
 import { ConfigModule } from '@nestjs/config';
@@ -19,6 +18,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, GattService],
+  providers: [AppService, BluetoothService],
 })
 export class AppModule { }
