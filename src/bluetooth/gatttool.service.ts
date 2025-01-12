@@ -7,7 +7,7 @@ export class GattService {
   private isConnected: boolean = false;
 
   constructor() {
-    this.gatttool = spawn('gatttool', ['-b', 'C8:47:80:12:9B:46', '--interactive']);
+    this.gatttool = spawn('gatttool', ['-b', 'C8-47-80-21-BC-F4', '--interactive']);
     this.gatttool.stdout.setEncoding('utf-8');
 
     this.gatttool.stdout.on('data', (data) => {
