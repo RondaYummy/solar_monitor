@@ -25,7 +25,10 @@ export class BluetoothService implements OnModuleInit {
       this.bluez = bluez.getInterface('org.freedesktop.DBus.ObjectManager');
       console.log('BlueZ interface initialized successfully');
 
+      console.log('Step 1: Starting initialization...');
       await this.connectToAllDevices();
+      console.log('Step 2: Completed connectToAllDevices');
+
     } catch (error) {
       console.error('Failed to initialize BlueZ interface:', error);
     }
@@ -73,13 +76,6 @@ export class BluetoothService implements OnModuleInit {
           console.warn(`[${devName}] Device ${devicePath} is not fully connected or services are not resolved.`);
           continue;
         }
-
-        Object.keys(objects)
-          .filter((path) => path.startsWith(devicePath) && objects[path]['org.bluez.GattCharacteristic1'])
-          .forEach((path) => {
-            const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
-            console.log(`[${devName}] Found characteristic at path: ${path}, UUID: ${characteristic.UUID}`);
-          });
 
         Object.keys(objects)
           .filter((path) => path.startsWith(devicePath))
