@@ -40,7 +40,7 @@ export class BluetoothService implements OnModuleInit {
 
   async connectToAllDevices() {
     await this.scanForDevices();
-    await new Promise((resolve) => setTimeout(resolve, 10000)); // Зачекати 10 секунд на сканування
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // Зачекати 5 секунд на сканування
 
     const objects = await this.bluez.GetManagedObjects();
     console.log(Object.keys(objects), 'All paths');
@@ -96,6 +96,10 @@ export class BluetoothService implements OnModuleInit {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value || characteristic?.UUID;
           console.log(`UUID: ${uuid}`);
+          if (!uuid) {
+            console.warn(`[${devName}] Characteristic UUID is undefined for path: ${path}`);
+            return;
+          }
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
@@ -131,7 +135,6 @@ export class BluetoothService implements OnModuleInit {
         }
 
         await this.sendCommandToBms(charPath, 0x97, devName);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         await this.setupNotification(charPath, devName, objects);
       } catch (error) {
@@ -261,7 +264,6 @@ export class BluetoothService implements OnModuleInit {
     await charInterface.StartNotify().catch((err) => {
       console.error(`[${devName}] Failed to start notifications:`, err);
     });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log(`[${devName}] Subscribed to notifications.`);
   }
 
