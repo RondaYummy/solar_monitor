@@ -263,25 +263,51 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async subscribeToNotifications(charPath: string, devName: string) {
-    const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
-    const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
-    await charInterface.StartNotify().catch((err) => {
-      console.error(`[${devName}] Failed to start notifications:`, err);
-    });
-    console.log(`[${devName}] Subscribed to notifications.`);
+  async connectToDevice(devicePath: string) {
+    try {
+      console.log(`Attempting to connect to device: ${devicePath}`);
+      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
+
+      if (!deviceProxy || !deviceProxy.getInterface('org.bluez.Device1')) {
+        throw new Error(`Device ${devicePath} does not have the required interface 'org.bluez.Device1'`);
+      }
+
+      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+
+      // Перевірка наявного з'єднання перед підключенням
+      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+      const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
+      if (isConnected) {
+        console.log(`[${devicePath}] Device is already connected.`);
+        return;
+      }
+
+      console.log(`Calling Connect() on device: ${devicePath}`);
+      await deviceInterface.Connect();
+
+      // Додатковий час для стабілізації з'єднання
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
+      if (!servicesResolved) {
+        throw new Error(`Device ${devicePath} connected, but services are not resolved.`);
+      }
+
+      console.log(`[${devicePath}] Successfully connected and services resolved.`);
+    } catch (error) {
+      console.error(`Error connecting to device ${devicePath}:`, error.message || error);
+      throw error; // Пропустити помилку для ретраю
+    }
   }
 
-  async connectToDeviceWithRetries(devicePath: string, retries = 5, delay = 10000): Promise<boolean> {
+  async connectToDeviceWithRetries(devicePath: string, retries = 3, delay = 5000): Promise<boolean> {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`[Attempt ${attempt}] Connecting to device: ${devicePath}`);
         await this.connectToDevice(devicePath);
-        console.log(`Successfully connected to device: ${devicePath}`);
         return true;
       } catch (error) {
-        const errorText = error?.text || error?.message || 'Unknown error';
-        console.error(`[Attempt ${attempt}] Failed to connect to device ${devicePath}:`, errorText);
+        console.error(`[Attempt ${attempt}] Failed to connect:`, error.message || error);
         if (attempt < retries) {
           console.log(`Retrying in ${delay / 1000} seconds...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
@@ -290,35 +316,5 @@ export class BluetoothService implements OnModuleInit {
     }
     console.error(`All attempts to connect to device ${devicePath} failed.`);
     return false;
-  }
-
-  async connectToDevice(devicePath: string) {
-    try {
-      const deviceProxy = await this.systemBus.getProxyObject('org.bluez', devicePath);
-
-      if (!deviceProxy || !deviceProxy.getInterface('org.bluez.Device1')) {
-        console.error(`Device ${devicePath} does not have interface org.bluez.Device1`);
-        return;
-      }
-
-      const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
-      await deviceInterface.Connect();
-
-      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
-      const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
-      const deviceName = await properties.Get('org.bluez.Device1', 'Name');
-      const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
-
-      if (isConnected && servicesResolved) {
-        console.log(`[${devicePath}] Device is already connected and services are resolved.`);
-        return true;
-      }
-      console.log(`[${deviceName.value}] Connected to device: ${devicePath} (Name: ${deviceName.value})`);
-      return deviceName.value;
-    } catch (error) {
-      const errorText = error?.text || error?.message || 'Unknown error';
-      console.error(`Failed to connect to device ${devicePath}: ${errorText}`);
-      throw error;
-    }
   }
 }
