@@ -43,7 +43,7 @@ export class BluetoothService implements OnModuleInit {
 
   async connectToAllDevices() {
     await this.scanForDevices();
-    await new Promise((resolve) => setTimeout(resolve, 10000)); // Зачекати 10 секунд на сканування
+    await new Promise((resolve) => setTimeout(resolve, 10000));
 
     const objects = await this.bluez.GetManagedObjects();
     console.log(Object.keys(objects), 'All paths');
@@ -93,7 +93,16 @@ export class BluetoothService implements OnModuleInit {
             }
           });
 
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Зачекати 5 секунд
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        // Лог усіх характеристик
+        Object.keys(objects)
+          .filter((path) => path.startsWith(devicePath) && objects[path]['org.bluez.GattCharacteristic1'])
+          .forEach((path) => {
+            const charInfo = objects[path]['org.bluez.GattCharacteristic1'];
+            console.log(`[Characteristic Found] Path: ${path}, UUID: ${charInfo?.UUID}`);
+          });
+
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           if (!characteristic) return false;
@@ -117,6 +126,14 @@ export class BluetoothService implements OnModuleInit {
         const descriptorPaths = Object.keys(objects).filter(
           (path) => path.startsWith(charPath) && path.includes('desc')
         );
+
+        // Лог усіх дескрипторів
+        Object.keys(objects)
+          .filter((path) => path.startsWith(charPath) && objects[path]['org.bluez.GattDescriptor1'])
+          .forEach((path) => {
+            const descriptorInfo = objects[path]['org.bluez.GattDescriptor1'];
+            console.log(`[Descriptor Found] Path: ${path}, UUID: ${descriptorInfo?.UUID}`);
+          });
 
         const descriptor2902 = descriptorPaths.find((path) => {
           const id = objects[path]['org.bluez.GattDescriptor1'].UUID?.value || objects[path]['org.bluez.GattDescriptor1'].UUID;
@@ -298,7 +315,8 @@ export class BluetoothService implements OnModuleInit {
 
       const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
       if (!servicesResolved) {
-        throw new Error(`Device ${devicePath} connected, but services are not resolved.`);
+        console.error(`[${devicePath}] Services are not resolved.`);
+        return;
       }
 
       console.log(`[${devicePath}] Successfully connected and services resolved.`);
