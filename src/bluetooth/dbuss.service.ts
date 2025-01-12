@@ -94,7 +94,7 @@ export class BluetoothService implements OnModuleInit {
         await new Promise((resolve) => setTimeout(resolve, 5000)); // Зачекати 5 секунд
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
-          const uuid = characteristic?.UUID?.value;
+          const uuid = characteristic?.UUID?.value || characteristic?.UUID;
           console.log(`UUID: ${uuid}`);
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
