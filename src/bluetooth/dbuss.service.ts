@@ -99,11 +99,11 @@ export class BluetoothService implements OnModuleInit {
           if (!characteristic) return false;
 
           const uuid = characteristic?.UUID?.value || characteristic?.UUID;
-          console.log(`UUID: ${uuid}`);
           if (!uuid) {
             console.warn(`[${devName}] Characteristic UUID is undefined for path: ${path}`);
             return;
           }
+          console.log(`UUID: ${uuid}`);
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
