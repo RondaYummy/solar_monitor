@@ -306,7 +306,7 @@ export class BluetoothService implements OnModuleInit {
       const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
       if (isConnected) {
         console.log(`[${devicePath}] Device is already connected.`);
-        return;
+        // return; // TODO
       }
 
       console.log(`Calling Connect() on device: ${devicePath}`);
