@@ -1,6 +1,13 @@
 #!/bin/bash
 
 function deploy() {
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  nvm use 22
+
+  echo "Node.js version: $(node -v)"
+  echo "npm version: $(npm -v)"
+
   echo "====> Починаємо оновлення проекту"
 
   # Оновлення репозиторію
