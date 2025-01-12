@@ -95,6 +95,7 @@ export class BluetoothService implements OnModuleInit {
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
           const uuid = characteristic?.UUID?.value;
+          console.log(`UUID: ${uuid}`);
           return uuid && uuid.toLowerCase() === '0000ffe1-0000-1000-8000-00805f9b34fb';
         });
 
@@ -131,7 +132,9 @@ export class BluetoothService implements OnModuleInit {
 
         await this.sendCommandToBms(charPath, 0x97, devName);
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        await this.setupNotification(charPath, devName);
+
+        const objects = await this.bluez.GetManagedObjects();
+        await this.setupNotification(charPath, devName, objects);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`, error);
       }
@@ -181,7 +184,7 @@ export class BluetoothService implements OnModuleInit {
     }
   }
 
-  async setupNotification(charPath: string, devName: string) {
+  async setupNotification(charPath: string, devName: string, objects: Record<string, any>) {
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
