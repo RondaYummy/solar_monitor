@@ -303,13 +303,13 @@ export class BluetoothService implements OnModuleInit {
       const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
 
       // Перевірка наявного з'єднання перед підключенням
-      const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
-      if (isConnected) {
-        console.log(`[${devicePath}] Device is already connected.`);
-        // return; // TODO
-      }
+      // const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
+      // if (isConnected) {
+      //   console.log(`[${devicePath}] Device is already connected.`);
+      // return; // TODO
+      // }
 
-      console.log(`Calling Connect() on device: ${devicePath}`);
+      console.log(`Calling "Connect" on device: ${devicePath}`);
       await deviceInterface.Connect();
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -318,7 +318,6 @@ export class BluetoothService implements OnModuleInit {
         console.error(`[${devicePath}] Services are not resolved.`);
         return;
       }
-
       console.log(`[${devicePath}] Successfully connected and services resolved.`);
     } catch (error) {
       console.error(`Error connecting to device ${devicePath}:`, error.message || error);
