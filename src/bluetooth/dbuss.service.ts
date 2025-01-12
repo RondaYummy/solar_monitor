@@ -311,7 +311,7 @@ export class BluetoothService implements OnModuleInit {
 
       console.log(`Calling "Connect" on device: ${devicePath}`);
       await deviceInterface.Connect();
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const servicesResolved = await properties.Get('org.bluez.Device1', 'ServicesResolved');
       if (!servicesResolved) {
