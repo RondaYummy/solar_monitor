@@ -55,7 +55,7 @@ export class BluetoothService implements OnModuleInit {
 
     for (const devicePath of devicePaths) {
       try {
-        const connected = await this.connectToDeviceWithRetries(devicePath, 5, 8000);
+        const connected = await this.connectToDeviceWithRetries(devicePath, 2, 5000);
         if (!connected) {
           console.warn(`Skipping device ${devicePath} as it could not connect after multiple attempts.`);
           continue;
