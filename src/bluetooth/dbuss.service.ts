@@ -283,10 +283,6 @@ export class BluetoothService implements OnModuleInit {
       const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
       const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
 
-      // Trust device
-      await deviceInterface.Trust();
-      console.log(`[${devicePath}] Device is now trusted.`);
-
       // Перевірка наявного з'єднання перед підключенням
       const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
       if (isConnected) {
