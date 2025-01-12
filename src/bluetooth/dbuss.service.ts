@@ -94,6 +94,8 @@ export class BluetoothService implements OnModuleInit {
         await new Promise((resolve) => setTimeout(resolve, 5000)); // Зачекати 5 секунд
         const charPath = Object.keys(objects).find((path) => {
           const characteristic = objects[path]['org.bluez.GattCharacteristic1'];
+          if (!characteristic) return false;
+
           const uuid = characteristic?.UUID?.value || characteristic?.UUID;
           console.log(`UUID: ${uuid}`);
           if (!uuid) {
@@ -160,6 +162,8 @@ export class BluetoothService implements OnModuleInit {
 
     command[command.length - 1] = this.calculateCrc(command);
 
+    console.log(`Command: ${command.toString('hex').toUpperCase()}, CRC: ${command[command.length - 1]}`);
+
     try {
       const charProxy = await this.systemBus.getProxyObject('org.bluez', charPath);
       const charInterface = charProxy.getInterface('org.bluez.GattCharacteristic1');
@@ -198,9 +202,10 @@ export class BluetoothService implements OnModuleInit {
       }
 
       await charInterface.StartNotify();
-      console.log(`[${devName}] Notifications started.`);
+      console.log(`[${devName}] Notifications enabled for characteristic: ${charPath}`);
 
       charInterface.on('PropertiesChanged', (iface, changed) => {
+        console.log(`[${devName}] PropertiesChanged event:`, iface, changed);
         if (changed.Value) {
           const data = Buffer.from(changed.Value);
           console.log(`[${devName}] Notification received: ${data.toString('hex').toUpperCase()}`);
