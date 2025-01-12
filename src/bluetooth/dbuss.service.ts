@@ -133,7 +133,6 @@ export class BluetoothService implements OnModuleInit {
         await this.sendCommandToBms(charPath, 0x97, devName);
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const objects = await this.bluez.GetManagedObjects();
         await this.setupNotification(charPath, devName, objects);
       } catch (error) {
         console.error(`Failed to connect to device ${devicePath}. Skipping...`, error);
