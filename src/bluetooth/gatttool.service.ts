@@ -43,6 +43,26 @@ export class GattService {
     });
   }
 
+  async activateNotifications(handle: string): Promise<void> {
+    if (!this.isConnected) {
+      throw new Error('Device not connected');
+    }
+
+    return new Promise((resolve, reject) => {
+      // Команда для активації нотифікацій через запис у відповідний дескриптор
+      this.gatttool.stdin.write(`char-write-req ${handle} 0100\n`);
+
+      this.gatttool.stdout.once('data', (data) => {
+        if (data.includes('Characteristic value was written successfully')) {
+          console.log(`Notifications activated on handle ${handle}`);
+          resolve();
+        } else {
+          reject(new Error('Failed to activate notifications'));
+        }
+      });
+    });
+  }
+
   async readCharacteristic(handle: string): Promise<string> {
     if (!this.isConnected) {
       throw new Error('Device not connected');
@@ -62,11 +82,27 @@ export class GattService {
     });
   }
 
-  disconnect() {
+  listenForNotifications(): void {
+    if (!this.isConnected) {
+      throw new Error('Device not connected');
+    }
+
+    this.gatttool.stdout.on('data', (data) => {
+      if (data.includes('Notification handle')) {
+        const match = data.toString().match(/Notification handle = [0-9a-fx]+ value: (.+)/);
+        if (match) {
+          console.log(`Notification received: ${match[1].trim()}`);
+        }
+      }
+    });
+  }
+
+  disconnect(): void {
     if (this.isConnected) {
       this.gatttool.stdin.write('disconnect\n');
       this.gatttool.stdin.end();
       this.isConnected = false;
+      console.log('Disconnected from device.');
     }
   }
 }
