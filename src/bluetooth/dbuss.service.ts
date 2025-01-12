@@ -122,13 +122,6 @@ export class BluetoothService implements OnModuleInit {
         }
         );
 
-        const descriptorFlags = objects[descriptor2902]?.['org.bluez.GattDescriptor1']?.Flags;
-        if (!descriptorFlags || !descriptorFlags.includes('write')) {
-          console.warn(`[${devName}] Descriptor ${descriptor2902} does not support write operations.`);
-          return;
-        }
-        console.log(descriptor2902, 'descriptor2902');
-
         if (descriptor2902) {
           console.log(`[${devName}] Found descriptor 0x2902 for characteristic ${charPath}: ${descriptor2902}`);
           await this.enableNotificationsForDescriptor(descriptor2902);
@@ -181,6 +174,15 @@ export class BluetoothService implements OnModuleInit {
     try {
       const descriptorProxy = await this.systemBus.getProxyObject('org.bluez', descriptorPath);
       const descriptorInterface = descriptorProxy.getInterface('org.bluez.GattDescriptor1');
+
+      const properties = descriptorProxy.getInterface('org.freedesktop.DBus.Properties');
+      const flags = await properties.Get('org.bluez.GattDescriptor1', 'Flags');
+
+      if (!flags.includes('write')) {
+        console.warn(`Descriptor ${descriptorPath} does not support write operations.`);
+        return false;
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 500));
       await descriptorInterface.WriteValue([0x01, 0x00], {});
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -203,6 +205,8 @@ export class BluetoothService implements OnModuleInit {
 
       await charInterface.StartNotify();
       console.log(`[${devName}] Notifications enabled for characteristic: ${charPath}`);
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       charInterface.on('PropertiesChanged', (iface, changed) => {
         console.log(`[${devName}] PropertiesChanged event:`, iface, changed);
@@ -231,13 +235,17 @@ export class BluetoothService implements OnModuleInit {
   processBmsNotification(data: Buffer, devName: string) {
     const startSequence = Buffer.from([0x55, 0xAA, 0xEB, 0x90]);
     if (data.slice(0, 4).equals(startSequence)) {
+      console.log(`[${devName}] Start sequence received, resetting buffer.`);
       this.responseBuffer = Buffer.alloc(0);
     }
+
     this.responseBuffer = Buffer.concat([this.responseBuffer, data]);
 
     if (this.responseBuffer.length >= 320) {
+      console.log(`[${devName}] Complete data frame received. Validating CRC...`);
       const isValidCrc = this.validateCrc(this.responseBuffer);
       if (!isValidCrc) {
+        console.warn(`[${devName}] Invalid CRC. Discarding frame.`);
         this.responseBuffer = Buffer.alloc(0);
         return;
       }
@@ -273,9 +281,13 @@ export class BluetoothService implements OnModuleInit {
       }
 
       const deviceInterface = deviceProxy.getInterface('org.bluez.Device1');
+      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
+
+      // Trust device
+      await deviceInterface.Trust();
+      console.log(`[${devicePath}] Device is now trusted.`);
 
       // Перевірка наявного з'єднання перед підключенням
-      const properties = deviceProxy.getInterface('org.freedesktop.DBus.Properties');
       const isConnected = await properties.Get('org.bluez.Device1', 'Connected');
       if (isConnected) {
         console.log(`[${devicePath}] Device is already connected.`);
