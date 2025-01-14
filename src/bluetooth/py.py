@@ -54,24 +54,27 @@ def parse_cell_info(data):
         start_index = 6
         for i in range(num_cells):
             voltage_raw = int.from_bytes(data[start_index:start_index + 2], byteorder='little')
-            cell_voltages.append(voltage_raw / 1000.0)  # Перетворення вольт
+            voltage = voltage_raw / 1000.0  # Перетворення вольт
+            if voltage > 0:  # Додаємо тільки якщо напруга більше 0
+                cell_voltages.append((i + 1, voltage))  # Зберігаємо номер ячейки і напругу
             start_index += 2
 
         cell_info = {
-            "num_cells": num_cells,
+            "num_cells": len(cell_voltages),  # Кількість ячейок з напругою > 0
             "cell_voltages": cell_voltages,
         }
 
         print("Cell Info Parsed:")
-        print(f"Number of Cells: {num_cells}")
-        for idx, voltage in enumerate(cell_voltages, start=1):
-            print(f"Cell {idx}: {voltage:.3f} V")
+        print(f"Number of Cells with voltage > 0: {len(cell_voltages)}")
+        for cell_num, voltage in cell_voltages:
+            print(f"Cell {cell_num}: {voltage:.3f} V")
 
         return cell_info
 
     except Exception as e:
         print(f"Error parsing Cell Info Frame: {e}")
         return None
+
 
 async def notification_handler(sender, data):
     if data[:4] == b'\x55\xAA\xEB\x90':
