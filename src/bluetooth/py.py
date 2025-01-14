@@ -18,9 +18,13 @@ def create_command(command_type):
     frame[19] = calculate_crc(frame[:19])
     return frame
 
-def parse_device_info(data):
+def log(device_name, message):
+    """Додає назву пристрою до логів."""
+    print(f"[{device_name}] {message}")
+
+def parse_device_info(data, device_name):
     """Парсинг Device Info Frame (0x03)."""
-    print("Parsing Device Info Frame...")
+    log(device_name, "Parsing Device Info Frame...")
     device_info = {
         "device_name": data[5:35].decode('utf-8', errors='ignore').strip(),
         "serial_number": data[35:55].decode('utf-8', errors='ignore').strip(),
@@ -29,23 +33,23 @@ def parse_device_info(data):
         "other_info": data[95:],
     }
 
-    print("Device Info Parsed:")
+    log(device_name, "Device Info Parsed:")
     for key, value in device_info.items():
-        print(f"{key}: {value}")
+        log(device_name, f"{key}: {value}")
 
     crc_calculated = calculate_crc(data[:-1])
     crc_received = data[-1]
 
     if crc_calculated != crc_received:
-        print(f"Invalid CRC: {crc_calculated} != {crc_received}")
+        log(device_name, f"Invalid CRC: {crc_calculated} != {crc_received}")
     else:
-        print("CRC Valid")
+        log(device_name, "CRC Valid")
 
     return device_info
 
-def parse_cell_info(data):
+def parse_cell_info(data, device_name):
     """Парсинг Cell Info Frame (0x02)."""
-    print("Parsing Cell Info Frame...")
+    log(device_name, "Parsing Cell Info Frame...")
     try:
         num_cells = data[5]  # Кількість ячейок
         cell_voltages = []
@@ -64,53 +68,56 @@ def parse_cell_info(data):
             "cell_voltages": cell_voltages,
         }
 
-        print("Cell Info Parsed:")
-        print(f"Number of Cells with voltage > 0: {len(cell_voltages)}")
+        log(device_name, "Cell Info Parsed:")
+        log(device_name, f"Number of Cells with voltage > 0: {len(cell_voltages)}")
         for cell_num, voltage in cell_voltages:
-            print(f"Cell {cell_num}: {voltage:.3f} V")
+            log(device_name, f"Cell {cell_num}: {voltage:.3f} V")
 
         return cell_info
 
     except Exception as e:
-        print(f"Error parsing Cell Info Frame: {e}")
+        log(device_name, f"Error parsing Cell Info Frame: {e}")
         return None
 
-
-async def notification_handler(sender, data):
+async def notification_handler(sender, data, device_name):
     if data[:4] == b'\x55\xAA\xEB\x90':
-        print(f"Notification received: {data.hex()}")
+        log(device_name, f"Notification received: {data.hex()}")
 
         frame_type = data[4]
         if frame_type == 0x03:
-            parse_device_info(data)
+            parse_device_info(data, device_name)
         elif frame_type == 0x02:
-            parse_cell_info(data)
+            parse_cell_info(data, device_name)
         else:
-            print(f"Unknown frame type: {frame_type}")
+            log(device_name, f"Unknown frame type: {frame_type}")
 
 async def connect_and_run(device):
     try:
         async with BleakClient(device.address) as client:
-            await client.start_notify(CHARACTERISTIC_UUID, notification_handler)
-            print(f"Connected to {device.name} ({device.address}) and notification started")
+            # Використовуємо asyncio.create_task для виклику notification_handler
+            def handle_notification(sender, data):
+                asyncio.create_task(notification_handler(sender, data, device.name))
+
+            await client.start_notify(CHARACTERISTIC_UUID, handle_notification)
+            log(device.name, f"Connected and notification started")
 
             # Надсилаємо команди для Device Info і Cell Info
             device_info_command = create_command(CMD_TYPE_DEVICE_INFO)
             cell_info_command = create_command(CMD_TYPE_CELL_INFO)
 
             await client.write_gatt_char(CHARACTERISTIC_UUID, device_info_command)
-            print(f"Device Info command sent to {device.name}: {device_info_command.hex()}")
+            log(device.name, f"Device Info command sent: {device_info_command.hex()}")
 
             await asyncio.sleep(1)  # Очікування між командами
 
             await client.write_gatt_char(CHARACTERISTIC_UUID, cell_info_command)
-            print(f"Cell Info command sent to {device.name}: {cell_info_command.hex()}")
+            log(device.name, f"Cell Info command sent: {cell_info_command.hex()}")
 
             await asyncio.sleep(30)  # Час для отримання даних
             await client.stop_notify(CHARACTERISTIC_UUID)
-            print(f"Notification stopped for {device.name} ({device.address})")
+            log(device.name, "Notification stopped")
     except Exception as e:
-        print(f"Error with {device.name} ({device.address}): {str(e)}")
+        log(device.name, f"Error: {str(e)}")
 
 async def main():
     devices = await BleakScanner.discover()
